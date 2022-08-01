@@ -1,0 +1,15 @@
+Site,Approx_date_band_notched,Period,Date_growth_measured,Days_growth_since_notching,Latitude,Longitude,Notes,BOM_weather_station_rainfall,BOM_station_number_rainfall,Distance_from_reserve_km_rainfall,BOM_evapotranspiration_site
+EPF,6/02/2020,1,14/02/2021,373,-41.77497,147.3183,Not including start or end date,Epping Forest (Forton),91032,5.6,Cressy Research Station
+TMP,29/01/2020,1,15/02/2021,382,-43.144035,147.962669,,Fortescue Bay,94213,0.2,Tasman Island
+MER,31/01/2020,1,13/02/2021,378,-41.56674,146.24294,"MER and DOG, between 30-31/01; Worth extrapolating between Lorinna and South Mole Creek",Lorinna,91055,9.3,Sheffield School Farm
+DOG,30/01/2020,1,13/02/2021,379,-41.5385778,146.324706,South Mole Creek 91371 is only 6.7 km away but only recorded data from 2016 Nov - 2019 Dec; Claude Road closest with relevant data,Claude Road (Cammelot),91361,11.5,Sheffield School Farm
+GRA,7/02/2020,1,9/02/2021,367,-42.55066,147.45885,,Colebrooke (Daniels Road),94260,2.8,Campania (Kincora)
+FREY,5/02/2020,1,16/02/2021,376,-41.94839,148.13788,,Apslawn,92001,3.8,Friendly Beaches
+BOF,5/06/2020,1,11/02/2021,250,-41.186032,148.189604,"BOF across 01 and 04/02, setting up bands; worth extrapolating across Goulds Country, St Helens and Ansons Bay",Goulds Country,92131,12.8,St Helens Aerodrome
+EPF,6/02/2020,2,16/02/2022,741,-41.77497,147.3183,Between 14-16/02/22,Epping Forest (Forton),91032,5.6,Cressy Research Station
+TMP,29/01/2020,2,13/02/2022,745,-42.98851,147.92212,,Fortescue Bay,94213,0.2,Tasman Island
+MER,31/01/2020,2,18/02/2022,748,-41.56674,146.24294,Between 17-18/02/2022,Lorinna,91055,9.3,Sheffield School Farm
+DOG,30/01/2020,2,18/02/2022,749,-41.5385778,146.324706,,South Mole Creek,91371,6.7,Sheffield School Farm
+GRA,7/02/2020,2,13/02/2022,736,-42.55066,147.45885,,Colebrooke (Daniels Road),94260,2.8,Campania (Kincora)
+FREY,5/02/2020,2,23/02/2022,748,-41.94839,148.13788,,Apslawn,92001,3.8,Friendly Beaches
+BOF,5/06/2020,2,24/02/2022,628,-41.18829,148.25107,Between 23-24/02/2022,Goulds Country,92131,12.8,St Helens Aerodrome
