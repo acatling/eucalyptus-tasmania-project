@@ -2,8 +2,13 @@
 # Alexandra Catling PhD Research
 # Started 26/02/2021
 
-#### Importing data ####
+#### Importing data and packages ####
 source("data_preparations.R")
+
+library(kableExtra)
+library(sf)
+library(dplyr)
+
 #### Visualising distributions of data ####
 #square root transformation for growth values, growth rates, 
 #initial DBH, total neighbour basal area!
@@ -37,25 +42,316 @@ hist(growthnbhdata$period_md)
 
 #Neighbourhood crowding
 hist(growthnbhdata$total_nci)
-#Check this 40 - I assume from an etimate that I need to remove? Similar for 10-20
+#Check this 40 - I assume from an estimate that I need to remove? Similar for 10-20
 #do this*
 hist(log(growthnbhdata$total_nci))
-#Logging gives negative values... Is this an issue?
+hist(growthnbhdata$intra_nci)
+hist(log(growthnbhdata$intra_nci))
+hist(growthnbhdata$inter_nci)
+hist(log(growthnbhdata$inter_nci))
 
-#### Relationships between climate and neighbour crowding ####
-#Not over a year though so this is misleading
-#fix this*
+##### Is initial DBH evenly distributed across species? ####
+# There are two trees that I have growth data for but no initial DBH measurements - "UN"
+# Have to remove these
+# dbhnumeric <- growthnbhdata %>% filter(DBH_cm != "UN") %>% 
+#   group_by(Site, Focal_sp, Plot, Tree) %>% filter(row_number() == 1)
+# dbhnumeric$DBH_cm <- as.numeric(dbhnumeric$DBH_cm)
+
+ggplot(onerowdata, aes(x = Focal_sp, y = sqrt(DBH_cm)))+
+  geom_boxplot()+
+  geom_jitter(width = 0.2, alpha = 0.5, colour = "forestgreen")+
+  theme_classic()+
+  ylab("sqrt(Initial DBH (cm))")+
+  xlab("Focal species")+
+  my_theme
+
+#One-way ANOVA to see, are there differences in initial DBH between species?
+modeldbh1 <- aov(sqrt(DBH_cm) ~ Focal_sp, data = onerowdata)
+summary(modeldbh1)
+#No, there aren't
+TukeyHSD(modeldbh1)
+
+#Summarising means, range and sd:
+#Initial DBH
+meandbh <- dbhnumeric %>%
+  group_by(Focal_sp) %>%
+  summarise(min_dbh = min(DBH_cm),
+            max_dbh = max(DBH_cm),
+            mean_dbh = mean(DBH_cm),
+            sd_dbh = sd(DBH_cm))
+
+### For precipitation:
+min(dbhnumeric$PPT)
+max(dbhnumeric$PPT)
+mean(dbhnumeric$PPT)
+sd(dbhnumeric$PPT)
+######### Does initial DBH predict growth rate? ####
+#shape = Period
+ggplot(growthnbhdata, aes(x = sqrt(DBH_cm), y = sqrt(growth_rate)))+
+  geom_point(aes(colour = Period), alpha = 0.5)+
+  geom_smooth(colour = "grey24", method = "lm")+
+  theme_bw()+
+  xlab("sqrt(Initial DBH (cm))")+
+  ylab("sqrt(Growth rate (mm/day))")+
+  facet_wrap(~ Focal_sp, ncol = 2, nrow = 2, scales = "fixed")+
+  theme_classic()+
+  theme(axis.title.x = element_text(size = 16),
+        axis.title.y = element_text(size = 16),
+        axis.text = element_text(size = 16),
+        strip.text.x = element_text(size = 16),
+        legend.text = element_text(size = 10))
+
+#Fit a linear model for the fixed effect of initial DBH on Growth rate
+moddbhamyg <- lmer(sqrt(growth_rate) ~ sqrt(DBH_cm) + 
+                     (1|Site/Plot/Tree), amygdata)
+summary(moddbhamyg)
+amygdharma <- simulateResiduals(moddbhamyg)
+plot(amygdharma)
+#ns, residuals good
+
+moddbhobli <- lmer(sqrt(growth_rate) ~ sqrt(DBH_cm) + 
+                     (1|Site/Plot/Tree), oblidata)
+summary(moddbhobli)
+oblidharma <- simulateResiduals(moddbhobli)
+plot(oblidharma)
+#p<0.01, residuals good
+
+moddbhovat <- lmer(sqrt(growth_rate) ~ sqrt(DBH_cm) + 
+                     (1|Site/Plot/Tree), ovatdata)
+summary(moddbhovat)
+ovatdharma <- simulateResiduals(moddbhovat)
+plot(ovatdharma)
+#ns, residuals okay -- significant deviation
+
+moddbhvimi <- lmer(sqrt(growth_rate) ~ sqrt(DBH_cm) + 
+                     (1|Site/Plot/Tree), vimidata)
+summary(moddbhvimi)
+vimidharma <- simulateResiduals(moddbhvimi)
+plot(vimidharma)
+#p<0.01, residuals good
+
+
+####### Do growth rates differ across species? ####
+#Growth rate by period
+meangrowth <- growthnbhdata %>%
+  group_by(Focal_sp) %>%
+  summarise(mean_growth_rate_period1 = mean(growth_rate[Period == 1]),
+            sd_growth_rate_period1 = sd(growth_rate[Period == 1]),
+            mean_growth_rate_period2 = mean(growth_rate[Period == 2]),
+            sd_growth_rate_period2 = sd(growth_rate[Period == 2]))
+
+ggplot(growthnbhdata, aes(x = Focal_sp, y = sqrt(growth_rate)))+
+  geom_boxplot()+
+  geom_jitter(aes(colour = Period), width = 0.2, alpha = 0.5)+
+  theme_classic()+
+  ylab("sqrt(Growth rate (mm/day))")+
+  xlab("Focal species")+
+  my_theme
+
+#One-way ANOVA to see if there are differences in growth rate between species
+modelgr1 <- aov(sqrt(growth_rate) ~ Focal_sp, data = growthnbhdata)
+summary(modelgr1)
+#Yes, there are
+TukeyHSD(modelgr1)
+#E. viminalis grows at a significantly faster rate than other species
+# E. amygdalina, E. ovata and E. obliqua all grow at similar rates
+
+## Do growth rates differ by period?
+ggplot(growthnbhdata, aes(x = Period, y = sqrt(growth_rate)))+
+  geom_boxplot()+
+  geom_jitter(width = 0.2, alpha = 0.5)+
+  theme_classic()+
+  ylab("sqrt(growth rate (mm/day))")+
+  xlab("Period")+
+  my_theme
+
+## More informative to look within species
+ggplot(growthnbhdata, aes(x = Focal_sp, y = sqrt(growth_rate), colour = Period))+
+  geom_boxplot()+
+  geom_point(position=position_jitterdodge(), width = 0.2, alpha = 0.5)+
+  theme_classic()+
+  ylab("sqrt(Growth rate (mm/day))")+
+  xlab("Focal species")+
+  my_theme
+
+modelperiod <- aov(sqrt(growth_rate) ~ Period, vimidata)
+summary(modelperiod)
+#no for amyg, yes for obli, no for ovat, no for vimi
+
+###### What neighbours do we find at each site? ####
+## Do this in a loop for all sites:
+listnbhgravelly <- surveydata %>% filter(Site == "GRA") %>% 
+  group_by(Neighbour_sp_ID) %>% filter(row_number() == 1) %>%
+  select(Site, Neighbour_sp_ID)
+## Or just this but not sorted:
+listneighboursbysite <- surveydata %>% group_by(Site, Neighbour_sp_ID) %>% filter(row_number() == 1) %>%
+  select(Site, Neighbour_sp_ID)
+##### Do NCI, basal area or density (number of neighbours) vary by site? ####
+### NCI
+growthnbhdata %>% mutate(Site = fct_reorder(Site, desc(MD))) %>%
+  ggplot(aes(x = Site, y = total_nbh_ba))+
+  geom_boxplot()+
+  geom_jitter(alpha = 0.4, colour = "dodgerblue")+
+  ylab("log(total basal area)")+
+  theme_classic()
+
+### BASAL AREA
+#First line of code here reorders Sites according to MD values, desc means descending
+growthnbhdata %>% mutate(Site = fct_reorder(Site, desc(MD))) %>%
+  ggplot(aes(x = Site, y = log_total_nci))+
+  geom_boxplot()+
+  geom_jitter(alpha = 0.4, colour = "dodgerblue")+
+  ylab("log(total NCI)")+
+  theme_classic()
+
+modelsite1 <- aov(total_nbh_ba ~ Site, growthnbhdata)
+summary(modelsite1)
+TukeyHSD(modelsite1)
+#Yes, definitely differences in total basal area by site
+# in directions we would expect. More basal area at wettest site, lowest at driest site
+
+#### How do NCI, basal area and density vary with climate? ####
+ggplot(growthnbhdata, aes(x = MD, y = total_nbh_ba))+
+  geom_jitter(alpha = 0.2, width = 4)+
+  geom_smooth(method="lm")+
+  geom_errorbar(stat="summary", fun.data="mean_se",width=1.5,size=1.2, colour = 'red')+
+  theme_classic()
+
+#Ideally this would have fixed effects for soil properties too
+modelmd1 <- lm(total_nbh_ba ~ MD, growthnbhdata)
+summary(modelmd1)
+#Yes, certainly more basal area of neighbours at wetter sites
+
+## NUMBER OF NEIGHBOURS
+growthnbhdata %>% mutate(Site = fct_reorder(Site, desc(MD))) %>%
+  ggplot(aes(x = Site, y = log(number_neighbours)))+
+  geom_boxplot()+
+  geom_jitter(alpha = 0.4, colour = "dodgerblue")+
+  theme_classic()
+
+modelsite2 <- aov(log(number_neighbours) ~ Site, growthnbhdata)
+summary(modelsite2)
+#Differences between sites in number of neighbours
+TukeyHSD(modelsite2)
+
+#PPT
+ggplot(growthnbhdata, aes(x = PPT, y = log(number_neighbours)))+
+  geom_jitter(alpha = 0.4, colour = "dodgerblue", width = 5)+
+  geom_smooth()+
+  geom_errorbar(stat="summary", fun.data="mean_se",width=0,size=0.8)+
+  theme_classic()
+#The number of neighbours increases with PPT
+
+modelppt1 <- lm(log(number_neighbours) ~ PPT, growthnbhdata)
+summary(modelppt1)
+#Suggests a difference in number of neighbours with PPT, adjusted R-squared ~0.3
+
+#PET
+ggplot(growthnbhdata, aes(x = PET, y = log(number_neighbours)))+
+  geom_point(alpha = 0.4, colour = "dodgerblue")+
+  geom_smooth(method = "lm")+
+  geom_errorbar(stat="summary", fun.data="mean_se",width=0,size=0.8)+
+  theme_classic()
+
+modelpet1 <- lm(log(number_neighbours) ~ PET, growthnbhdata)
+summary(modelpet1)
+#Suggests a difference in number of neighbours with PET, adjusted R-squared ~0.31
+
+#MD
+ggplot(growthnbhdata, aes(x = MD, y = log(number_neighbours)))+
+  geom_point(alpha = 0.4, colour = "dodgerblue")+
+  geom_smooth()+
+  geom_errorbar(stat="summary", fun.data="mean_se",width=0,size=0.8)+
+  theme_classic()
+
+modelmd1 <- lm(log(number_neighbours) ~ MD, growthnbhdata)
+summary(modelmd1)
+#Suggests a difference in number of neighbours with MD, adjusted R-squared ~0.3
+
+############ Another way of plotting above
+# Number of neighbours against PPT/PET/MD
+ggplot(growthnbhdata, aes(x = PPT, y = log(number_neighbours), group = Site))+
+  geom_boxplot()+
+  geom_jitter(alpha = 0.4, colour = "dodgerblue", position = (position_jitter(width = 5)))+
+  theme_classic()
+ggplot(growthnbhdata, aes(x = PET, y = log(number_neighbours), group = Site))+
+  geom_boxplot()+
+  geom_jitter(alpha = 0.4, colour = "dodgerblue")+
+  theme_classic()
+ggplot(growthnbhdata, aes(x = MD, y = log(number_neighbours), group = Site))+
+  geom_boxplot()+
+  geom_jitter(alpha = 0.4, colour = "dodgerblue", position = (position_jitter(width = 5)))+
+  theme_classic()
+#Plotting neighbour basal area against PPT/PET/MD
+ggplot(growthnbhdata, aes(x = PPT, y = sqrt(total_nbh_ba), group = Site))+
+  geom_boxplot()+
+  geom_jitter(alpha = 0.4, colour = "dodgerblue", position = (position_jitter(width = 5)))+
+  theme_classic()
+ggplot(growthnbhdata, aes(x = PET, y = sqrt(total_nbh_ba), group = Site))+
+  geom_boxplot()+
+  geom_jitter(alpha = 0.4, colour = "dodgerblue", position = (position_jitter(width = 5)))+
+  theme_classic()
+ggplot(growthnbhdata, aes(x = MD, y = sqrt(total_nbh_ba), group = Site))+
+  geom_boxplot()+
+  geom_jitter(alpha = 0.4, colour = "dodgerblue", position = (position_jitter(width = 5)))+
+  theme_classic()
+
+#MD and NCI correlated
+dev.off()
+pdf("Output/nci~md.pdf", width=21, height=21)
+par(pty="s")
+growthnbhdata %>% filter(Period == 2) %>%
+  ggplot(aes(x = std_md, y = log_total_nci))+
+  geom_jitter(alpha = 0.4, width = 0.05)+
+  geom_smooth(method="lm")+
+  xlab("Moisture deficit (mean annual precipitation - mean annual evapotranspiration, standardised)")+
+  ylab("log(Neighbourhood crowding index)")+
+  theme_classic()
+dev.off()
+
+modelpptnci <- lmer(log_total_nci ~ std_md + (1|Site/Plot/Tree), onerowdata)
+summary(modelpptnci)
+r.squaredGLMM(modelpptnci)
+
+
+### Correlations with period climate
+#### neighbour info
+#basal area not correlated with period climate
+ggplot(growthnbhdata, aes(x = period_md, y = sqrt(total_nbh_ba), colour = Period))+
+  geom_point()+
+  geom_smooth(method="lm")+
+  theme_classic()
+#number of neighbours is correlated with period climate
+ggplot(growthnbhdata, aes(x = period_md, y = log(number_neighbours+1), colour = Period))+
+  geom_point()+
+  geom_smooth(method="lm")+
+  theme_classic()
+
+#number of neighbours is correlated with period climate
+ggplot(growthnbhdata, aes(x = period_md, y = log_total_nci, colour = Period))+
+  geom_point()+
+  geom_smooth(method="lm")+
+  theme_classic()
+
+#### Relationships between climate variables ####
+#Standardised by day, 365 for annual climate, days_in_period for period climate
 
 ### Climate
-ggplot(growthnbhdata, aes(x = PPT, y = period_rainfall))+
+ggplot(growthnbhdata, aes(x = daily_ppt, y = daily_period_rainfall))+
   geom_point()+
   geom_smooth(method="lm")+
+  ylab("daily period rainfall")+
+  xlab("daily long-term rainfall")+
   theme_classic()
 
-ggplot(growthnbhdata, aes(x = PPT, y = period_md))+
+ggplot(growthnbhdata, aes(x = daily_md, y = daily_period_md))+
   geom_point()+
   geom_smooth(method="lm")+
+  ylab("daily period md")+
+  xlab("daily long-term md")+
   theme_classic()
+
+#### Plotting growth ~ period rainfall ####
 
 dev.off()
 pdf("Output/growth_rate~period_rainfall.pdf", width=21, height=21)
@@ -74,116 +370,185 @@ dev.off()
 modelperiodppt <- lmer(sqrt(growth_rate) ~ std_prain + I(std_prain^2) + (1|Site/Plot/Tree), growthnbhdata)
 summary(modelperiodppt)
 
-#### Relationship between climate and NCI
-#period climate and NCI are correlated
-#MD and NCI correlated
-growthnbhdata %>% filter(Period == 1) %>%
-ggplot(aes(x = std_md, y = log_nci))+
-  geom_jitter(alpha = 0.4, width = 0.05)+
-  geom_smooth(method="lm")+
-  xlab("Moisture deficit (mean annual precipitation - mean annual evapotranspiration, standardised)")+
-  ylab("log(Neighbourhood crowding index)")+
-  theme_classic()
-
-modelpptnci <- lmer(log_nci ~ std_md + (1|Site/Plot/Tree), onerowdata)
-summary(modelpptnci)
-r.squaredGLMM(modelpptnci)
-
-#### neighbour info
-#basal area not correlated with period climate
-ggplot(growthnbhdata, aes(x = period_md, y = sqrt(total_nbh_ba), colour = Period))+
-  geom_point()+
-  geom_smooth(method="lm")+
-  theme_classic()
-#number of neighbours is correlated with period climate
-ggplot(growthnbhdata, aes(x = period_md, y = log(number_neighbours+1), colour = Period))+
-  geom_point()+
-  geom_smooth(method="lm")+
-  theme_classic()
-#basal area correlated with long-term climate
-ggplot(growthnbhdata, aes(x = std_md, y = sqrt(total_nbh_ba)))+
-  geom_point()+
-  geom_smooth(method="lm")+
-  theme_classic()
-#number of neighbours is correlated with long-term climate
-ggplot(growthnbhdata, aes(x = std_md, y = log(number_neighbours+1)))+
-  geom_point()+
-  geom_smooth(method="lm")+
-  theme_classic()
-
-
 ##### Research questions: Climate vs competition #####
 # How does sensitivity of growth to climate vary with competition?
-# Using Neighbourhood Crowding Index (Heygi's Index) as proxy for competition
+#only looking at MD
 
 #Create plot with growth rate on y axis, moisture on x axis
 # and two fitted lines and CIs for sparse neighbourhood and dense neighbourhood
 with(growthnbhdata, plot(sqrt(growth_rate) ~ MD))
 with(growthnbhdata, plot(sqrt(growth_rate) ~ log(total_nci)))
 
-#### Main model ####
-#Model won't converge with MD - figure out why!
-#scaled std_nci not working atm
-#Ideally want aridity measure for long-term climate too
-model1 <- lmer(sqrt(growth_rate) ~ std_dbh + Focal_sp + std_ppt + 
-                 log_nci + std_dbh*log_nci + Focal_sp:std_dbh + std_ppt:log_nci +
-                 (1|Site/Plot/Tree), growthnbhdata)
-model1dharma <- simulateResiduals(model1)
-plot(model1dharma)
-#Bad residuals!! Why...?
-summary(model1)
-vif(model1)
+#### Plot the number of conspecifics and heterospecifics for each sp ####
+ggplot(onerowdata, aes(x = sqrt(growth_rate), y = std_intra_nci))+
+  geom_point(alpha = 0.3)+
+  ylab("standardised log(intra NCI+1)")+
+  theme_classic()+
+  facet_wrap(~Focal_sp)
 
-#Including period moisture deficit
-model2 <- lmer(sqrt(growth_rate) ~ std_dbh + Focal_sp + std_ppt + std_period_md +
-               log_nci + std_dbh*log_nci + Focal_sp:std_dbh + std_ppt:log_nci + std_period_md:log_nci +
-                 (1|Site/Plot/Tree), growthnbhdata)
-model3dharma <- simulateResiduals(model2)
-plot(model2dharma)
-#Bad residuals!! Why...?
-summary(model2)
-vif(model2)
+ggplot(onerowdata, aes(x = sqrt(growth_rate), y = std_inter_nci))+
+  geom_point(alpha = 0.3)+
+  ylab("standardised log(inter NCI+1)")+
+  theme_classic()+
+  facet_wrap(~Focal_sp)
+
+#### Main models by species ####
+### Total nci only model:
+#growth ~ NCI + long-term climate + period climate + NCI*period climate +
+#initial DBH + initial DBH*NCI + initial DBH*period climate +(1|Site/Plot/Tree)
+
+### Intra and inter nci model:
+#growth ~ NCI intra + NCI inter + long-term climate + period climate + 
+#NCI intra*period climate + NCI inter*period climate +
+#initial DBH + initial DBH*period climate + initial DBH*NCI intra + 
+#initial DBH*NCI inter + (1|Site/Plot/Tree)
+
+### AMYG ####
+amygmod1 <- lmer(sqrt(growth_rate) ~ std_total_nci + std_md + std_period_md + 
+                   std_total_nci*std_period_md + DBH_cm + DBH_cm*std_total_nci +
+                   DBH_cm*std_period_md + (1|Site/Plot/Tree), amygdata)
+amygmod1dharma <- simulateResiduals(amygmod1)
+plot(amygmod1dharma)
+#great
+summary(amygmod1)
+vif(amygmod1)
+#bad vifs for NCI and period MD
+#plot(amygmod1)
+
+## Try removing period md (could replace with anomalies)
+# amygmod1 <- lmer(sqrt(growth_rate) ~ std_total_nci + std_md + 
+#                     + DBH_cm + DBH_cm*std_total_nci +
+#                    (1|Site/Plot/Tree), amygdata)
+# vif(amygmod1)
+#Why are DBH_cm and NCI correlated?!
+ggplot(amygdata, aes(x = DBH_cm, y = std_total_nci))+
+  geom_point()+
+  geom_smooth(method='lm')+
+  theme_classic()
+
+## Try removing long-term md?
+# amygmod1 <- lmer(sqrt(growth_rate) ~ std_total_nci + std_period_md + 
+#                    std_total_nci*std_period_md + DBH_cm + DBH_cm*std_total_nci +
+#                    DBH_cm*std_period_md + (1|Site/Plot/Tree), amygdata)
+# vif(amygmod1)
+#still problems with NCI and period_md and DBH_cm
+
+## Try removing NCI
+# amygmod1 <- lmer(sqrt(growth_rate) ~ std_md + std_period_md + 
+#                    + DBH_cm +
+#                    DBH_cm*std_period_md + (1|Site/Plot/Tree), amygdata)
+# vif(amygmod1)
+#Now period md and DBH are correlated? wah
+ggplot(amygdata, aes(x = DBH_cm, y = period_md))+
+  geom_point()+
+  geom_smooth(method='lm')+
+  theme_classic()
+#No it's not!
+## solution: correlation between NCI and long-term climate is fine.
+# correlation between NCI and period climate is definitely fine. Ignoring these two
+# correlations between long-term and period climate are not good - 
+# so will model period climate as anomalies, as John suggested
+# actually I think that is fine too when I don't fit a linear regression to it 
+
+### intraspecific and interspecific NCIs model, mod2
+amygmod2 <- lmer(sqrt(growth_rate) ~ std_intra_nci + std_inter_nci + std_md + 
+                   std_period_md + std_intra_nci*std_period_md + std_inter_nci*std_period_md + 
+                   DBH_cm + DBH_cm*std_intra_nci + DBH_cm*std_inter_nci +
+                   DBH_cm*std_period_md + (1|Site/Plot/Tree), amygdata)
+amygmod2dharma <- simulateResiduals(amygmod2)
+plot(amygmod2dharma)
+#great
+summary(amygmod2)
+vif(amygmod1)
+#bad vifs for NCI and period MD
+
+### OBLI ####
+oblimod1 <- lmer(sqrt(growth_rate) ~ std_total_nci + std_md + std_period_md + 
+                   std_total_nci*std_period_md + DBH_cm + DBH_cm*std_total_nci +
+                   DBH_cm*std_period_md + (1|Site/Plot/Tree), oblidata)
+oblimod1dharma <- simulateResiduals(oblimod1)
+plot(oblimod1dharma)
+#great
+summary(oblimod1)
+vif(oblimod1)
+#very bad vifs for NCI and period MD
+#plot(oblimod1)
+oblimod2 <- lmer(sqrt(growth_rate) ~ std_intra_nci + std_inter_nci + std_md + 
+                   std_period_md + std_intra_nci*std_period_md + std_inter_nci*std_period_md + 
+                   DBH_cm + DBH_cm*std_intra_nci + DBH_cm*std_inter_nci +
+                   DBH_cm*std_period_md + (1|Site/Plot/Tree), oblidata)
+oblimod2dharma <- simulateResiduals(oblimod2)
+plot(oblimod2dharma)
+#great
+summary(oblimod2)
+vif(oblimod1)
+#very bad vifs for NCI and period MD
+
+### OVAT ####
+ovatmod1 <- lmer(sqrt(growth_rate) ~ std_total_nci + std_md + std_period_md + 
+                   std_total_nci*std_period_md + DBH_cm + DBH_cm*std_total_nci +
+                   DBH_cm*std_period_md + (1|Site/Plot/Tree), ovatdata)
+ovatmod1dharma <- simulateResiduals(ovatmod1)
+plot(ovatmod1dharma)
+#residuals not great
+summary(ovatmod1)
+vif(ovatmod1)
+#bad vifs for NCI and period MD
+#plot(ovatmod1)
+ovatmod2 <- lmer(sqrt(growth_rate) ~ std_intra_nci + std_inter_nci + std_md + 
+                   std_period_md + std_intra_nci*std_period_md + std_inter_nci*std_period_md + 
+                   DBH_cm + DBH_cm*std_intra_nci + DBH_cm*std_inter_nci +
+                   DBH_cm*std_period_md + (1|Site/Plot/Tree), ovatdata)
+ovatmod2dharma <- simulateResiduals(ovatmod2)
+plot(ovatmod2dharma)
+#great
+summary(ovatmod2)
+vif(ovatmod1)
+#very bad vifs for NCI and period MD
+
+### VIMI ####
+vimimod1 <- lmer(sqrt(growth_rate) ~ std_total_nci + std_md + std_period_md + 
+                   std_total_nci*std_period_md + DBH_cm + DBH_cm*std_total_nci +
+                   DBH_cm*std_period_md + (1|Site/Plot/Tree), vimidata)
+vimimod1dharma <- simulateResiduals(vimimod1)
+plot(vimimod1dharma)
+#okay
+summary(vimimod1)
+vif(vimimod1)
+#very bad vifs for NCI, bad for period MD
+#plot(vimimod1)
+vimimod2 <- lmer(sqrt(growth_rate) ~ std_intra_nci + std_inter_nci + std_md + 
+                   std_period_md + std_intra_nci*std_period_md + std_inter_nci*std_period_md + 
+                   DBH_cm + DBH_cm*std_intra_nci + DBH_cm*std_inter_nci +
+                   DBH_cm*std_period_md + (1|Site/Plot/Tree), vimidata)
+vimimod2dharma <- simulateResiduals(vimimod2)
+plot(vimimod2dharma)
+#okay
+summary(vimimod2)
+vif(vimimod1)
+#very bad vifs for NCI, bad for period MD
+
+
+
+
+### Try removing terms to see which ones are correlated/if removing one changes others'results?
 
 #without neighbours
-model3 <- lmer(sqrt(growth_rate) ~ std_dbh + Focal_sp + std_ppt + std_period_md +
-                  Focal_sp:std_dbh +
-                 (1|Site/Plot/Tree), growthnbhdata)
-model3dharma <- simulateResiduals(model3)
-plot(model3dharma)
-#Bad residuals!! Why...?
-summary(model3)
-vif(model3)
 
 #without long-term climate
-model4 <- lmer(sqrt(growth_rate) ~ std_dbh + Focal_sp + std_period_md +
-                 log_nci + std_dbh*log_nci + Focal_sp:std_dbh + log_nci + std_period_md:log_nci +
-                 (1|Site/Plot/Tree), growthnbhdata)
-model4dharma <- simulateResiduals(model4)
-plot(model4dharma)
-#Bad residuals!! Why...?
-summary(model4)
-vif(model4)
 
 #without period climate
-model5 <- lmer(sqrt(growth_rate) ~ std_dbh + Focal_sp + std_ppt + 
-                 log_nci + std_dbh*log_nci + Focal_sp:std_dbh + std_ppt:log_nci +
-                 (1|Site/Plot/Tree), growthnbhdata)
-model5dharma <- simulateResiduals(model5)
-plot(model5dharma)
-#Bad residuals!! Why...?
-summary(model5)
-vif(model5)
 
 
-#### Plotting growth rate in response to NCI ####
+#### Plotting growth rate in response to NCI from model ####
 dev.off()
 pdf("Output/growth_rate~NCI.pdf", width=21, height=21)
 par(pty="s")
-plot(sqrt(growth_rate) ~ std_nci, pch=19, col=alpha("grey60", 0.3), ylab="sqrt(Growth rate (mm/day))", xlab="Neighbourhood crowding index (standardised, sqrt)", tck=-0.01, cex= 2, cex.lab = 2, cex.axis = 2, growthnbhdata)
+plot(sqrt(growth_rate) ~ std_total_nci, pch=19, col=alpha("grey60", 0.3), ylab="sqrt(Growth rate (mm/day))", xlab="Neighbourhood crowding index (standardised, sqrt)", tck=-0.01, cex= 2, cex.lab = 2, cex.axis = 2, growthnbhdata)
 model<-lmer(sqrt(growth_rate) ~ std_dbh + Focal_sp + std_ppt + 
-              std_nci + std_dbh*std_nci + Focal_sp:std_dbh + std_ppt:std_nci +
+              std_total_nci + std_dbh*std_total_nci + Focal_sp:std_dbh + std_ppt:std_total_nci +
               (1|Site/Plot/Tree), growthnbhdata)
-x_to_plot<-seq.func(growthnbhdata$std_nci)
+x_to_plot<-seq.func(growthnbhdata$std_total_nci)
 #mean NCI - black
 preddata <- with(model, data.frame(1, 0, 0, 0, 0, 0, x_to_plot, 0*x_to_plot, 0*0, 0*0, 0*0, 0*x_to_plot))
 plotted.pred <- glmm.predict(mod = model, newdat = preddata, se.mult = 1.96, logit_link=FALSE, log_link=FALSE, glmmTMB=FALSE)
@@ -248,242 +613,6 @@ hist(growthnbhdata$std_ppt)
 hist(growthnbhdata$PPT)
 mean(growthnbhdata$PPT)
 
-###### What neighbours do we find at each site? ####
-## Do this in a loop for all sites:
-listnbhgravelly <- surveydata %>% filter(Site == "GRA") %>% 
-  group_by(Neighbour_sp_ID) %>% filter(row_number() == 1) %>%
-  select(Site, Neighbour_sp_ID)
-## Or just this but not sorted:
-listneighboursbysite <- surveydata %>% group_by(Site, Neighbour_sp_ID) %>% filter(row_number() == 1) %>%
-  select(Site, Neighbour_sp_ID)
-##### Is initial DBH evenly distributed across species? ####
-
-# There are two trees that I have growth data for but no initial DBH measurements - "UN"
-# Have to remove these
-dbhnumeric <- growthnbhdata %>% filter(DBH_cm != "UN") %>% 
-  group_by(Site, Focal_sp, Plot, Tree) %>% filter(row_number() == 1)
-dbhnumeric$DBH_cm <- as.numeric(dbhnumeric$DBH_cm)
-#Renaming species' names from AMYG to Eucalyptus amygdalina etc.
-dbhnumeric <- dbhnumeric %>% mutate(Focal_sp = recode(Focal_sp, "AMYG" = "Eucalyptus amygdalina",
-                                                "OBLI" = "Eucalyptus obliqua",
-                                                "OVAT" = "Eucalyptus ovata",
-                                                "VIMI" = "Eucalyptus viminalis"))
-ggplot(dbhnumeric, aes(x = Focal_sp, y = sqrt(DBH_cm)))+
-  geom_boxplot()+
-  geom_jitter(width = 0.2, alpha = 0.5, colour = "forestgreen")+
-  theme_classic()+
-  ylab("sqrt(Initial DBH (cm))")+
-  xlab("Focal species")+
-  my_theme
-
-#One-way ANOVA to see, are there differences in initial DBH between species?
-modeldbh1 <- aov(sqrt(DBH_cm) ~ Focal_sp, data = dbhnumeric)
-summary(modeldbh1)
-#No, there aren't
-TukeyHSD(modeldbh1)
-
-#Summarising means, range and sd:
-#Initial DBH
-meandbh <- dbhnumeric %>%
-  group_by(Focal_sp) %>%
-  summarise(min_dbh = min(DBH_cm),
-            max_dbh = max(DBH_cm),
-            mean_dbh = mean(DBH_cm),
-            sd_dbh = sd(DBH_cm))
-
-### For precipitation:
-min(dbhnumeric$PPT)
-max(dbhnumeric$PPT)
-mean(dbhnumeric$PPT)
-sd(dbhnumeric$PPT)
-####### Do growth rates differ across species? ####
-#Growth rate by period
-meangrowth <- growthnbhdata %>%
-  group_by(Focal_sp) %>%
-  summarise(mean_growth_rate_period1 = mean(growth_rate[Period == 1]),
-            sd_growth_rate_period1 = sd(growth_rate[Period == 1]),
-            mean_growth_rate_period2 = mean(growth_rate[Period == 2]),
-            sd_growth_rate_period2 = sd(growth_rate[Period == 2]))
-
-ggplot(growthnbhdata, aes(x = Focal_sp, y = sqrt(growth_rate)))+
-  geom_boxplot()+
-  geom_jitter(aes(colour = Period), width = 0.2, alpha = 0.5)+
-  theme_classic()+
-  ylab("Average growth rate (mm/day)")+
-  xlab("Focal species")+
-  my_theme
-
-#One-way ANOVA to see if there are differences in growth rate between species
-modelgr1 <- aov(sqrt(growth_rate) ~ Focal_sp, data = growthnbhdata)
-summary(modelgr1)
-#Yes, there are
-TukeyHSD(modelgr1)
-#E. viminalis grows at a significantly faster rate than other species
-# E. amygdalina, E. ovata and E. obliqua all grow at similar rates
-
-## Do growth rates differ by period?
-ggplot(growthnbhdata, aes(x = Period, y = sqrt(growth_rate)))+
-  geom_boxplot()+
-  geom_jitter(width = 0.2, alpha = 0.5)+
-  theme_classic()+
-  ylab("Average growth rate (mm/day)")+
-  xlab("Period")+
-  my_theme
-modelperiod <- aov(sqrt(growth_rate) ~ Period, data = growthnbhdata)
-summary(modelperiod)
-#hm, apparently yes
-
-######### Does initial DBH predict growth rate? ####
-ggplot(growthnbhdata, aes(x = sqrt(DBH_cm), y = sqrt(growth_rate)))+
-  geom_point(aes(colour = Focal_sp, shape = Period), alpha = 0.5)+
-  geom_smooth(colour = "grey24", method = "lm")+
-  theme_bw()+
-  xlab("sqrt(Initial DBH (cm))")+
-  ylab("sqrt(Average growth rate (mm/day))")+
-  facet_wrap(~ Focal_sp, ncol = 2, nrow = 2, scales = "fixed")+
-  theme_classic()+
-  theme(axis.title.x = element_text(size = 16),
-        axis.title.y = element_text(size = 16),
-        axis.text = element_text(size = 16),
-        strip.text.x = element_text(size = 16),
-        legend.text = element_text(size = 10))
-
-#Fit a linear model for the fixed effect of initial DBH on Growth rate
-##Going to compare this for individual species
-amygdata <- growthnbhdata %>% filter(Focal_sp == "AMYG")
-oblidata <- growthnbhdata %>% filter(Focal_sp == "OBLI")
-ovatdata <- growthnbhdata %>% filter(Focal_sp == "OVAT")
-vimidata <- growthnbhdata %>% filter(Focal_sp == "VIMI")
-
-moddbhamyg <- lmer(sqrt(growth_rate) ~ sqrt(DBH_cm) + 
-                      (1|Site/Plot/Tree), amygdata)
-summary(moddbhamyg)
-amygdharma <- simulateResiduals(moddbhamyg)
-plot(amygdharma)
-#ns, residuals good
-
-moddbhobli <- lmer(sqrt(growth_rate) ~ sqrt(DBH_cm) + 
-                      (1|Site/Plot/Tree), oblidata)
-summary(moddbhobli)
-oblidharma <- simulateResiduals(moddbhobli)
-plot(oblidharma)
-#p<0.01, residuals great
-
-moddbhovat <- lmer(sqrt(growth_rate) ~ sqrt(DBH_cm) + 
-                     (1|Site/Plot/Tree), ovatdata)
-summary(moddbhovat)
-ovatdharma <- simulateResiduals(moddbhovat)
-plot(ovatdharma)
-#ns, residuals okay
-
-moddbhvimi <- lmer(sqrt(growth_rate) ~ sqrt(DBH_cm) + 
-                     (1|Site/Plot/Tree), vimidata)
-summary(moddbhvimi)
-vimidharma <- simulateResiduals(moddbhvimi)
-plot(vimidharma)
-#p<0.01, residuals good
-
-################ Do basal area or density (number of neighbours) vary by site? ####
-### BASAL AREA
-#First line of code here reorders Sites according to MD values (so from wettest to driest!)
-growthnbhdata %>% mutate(Site = fct_reorder(Site, MD)) %>%
-ggplot(aes(x = Site, y = std_nci))+
-  geom_boxplot()+
-  geom_jitter(alpha = 0.4, colour = "dodgerblue")+
-  theme_classic()
-
-modelsite1 <- aov(total_nbh_ba ~ Site, growthnbhdata)
-summary(modelsite1)
-TukeyHSD(modelsite1)
-#Yes, definitely differences in total basal area by site
-# in directions we would expect. More basal area at wettest site, lowest at driest site
-
-### And is this because of climate?
-ggplot(growthnbhdata, aes(x = MD, y = total_nbh_ba))+
-  geom_jitter(alpha = 0.2, width = 4)+
- geom_smooth(method="lm")+
-  geom_errorbar(stat="summary", fun.data="mean_se",width=0,size=0.8)+
-  theme_classic()
-
-#Ideally this would have fixed effects for soil properties too
-modelmd1 <- lm(total_nbh_ba ~ MD, growthnbhdata)
-summary(modelmd1)
-#Yes, certainly more basal area of neighbours at wetter sites
-
-## NUMBER OF NEIGHBOURS
-growthnbhdata %>% mutate(Site = fct_reorder(Site, MD)) %>%
-  ggplot(aes(x = Site, y = log(number_neighbours)))+
-  geom_boxplot()+
-  geom_jitter(alpha = 0.4, colour = "dodgerblue")+
-  theme_classic()
-
-modelsite2 <- aov(log(number_neighbours) ~ Site, growthnbhdata)
-summary(modelsite2)
-#Differences between sites in number of neighbours
-TukeyHSD(modelsite2)
-
-#PPT
-ggplot(growthnbhdata, aes(x = PPT, y = log(number_neighbours)))+
-  geom_jitter(alpha = 0.4, colour = "dodgerblue", width = 5)+
-  geom_smooth(method="lm")+
-  geom_errorbar(stat="summary", fun.data="mean_se",width=0,size=0.8)+
-  theme_classic()
-#The number of neighbours increases with PPT
-
-modelppt1 <- lm(log(number_neighbours) ~ PPT, growthnbhdata)
-summary(modelppt1)
-#Suggests a difference in number of neighbours with PPT, adjusted R-squared ~0.3
-
-#PET
-ggplot(growthnbhdata, aes(x = PET, y = log(number_neighbours)))+
-  geom_point(alpha = 0.4, colour = "dodgerblue")+
-  geom_smooth(method = "lm")+
-  geom_errorbar(stat="summary", fun.data="mean_se",width=0,size=0.8)+
-  theme_classic()
-
-modelpet1 <- lm(log(number_neighbours) ~ PET, growthnbhdata)
-summary(modelpet1)
-#Suggests a difference in number of neighbours with PET, adjusted R-squared ~0.31
-
-#MD
-ggplot(growthnbhdata, aes(x = MD, y = log(number_neighbours)))+
-  geom_point(alpha = 0.4, colour = "dodgerblue")+
-  geom_smooth(method="lm")+
-  geom_errorbar(stat="summary", fun.data="mean_se",width=0,size=0.8)+
-  theme_classic()
-
-modelmd1 <- lm(log(number_neighbours) ~ MD, growthnbhdata)
-summary(modelmd1)
-#Suggests a difference in number of neighbours with MD, adjusted R-squared ~0.3
-
-############ Another way of plotting above
-# Number of neighbours against PPT/PET/MD
-ggplot(growthnbhdata, aes(x = PPT, y = log(number_neighbours), group = Site))+
-  geom_boxplot()+
-  geom_jitter(alpha = 0.4, colour = "dodgerblue", position = (position_jitter(width = 5)))+
-  theme_classic()
-ggplot(growthnbhdata, aes(x = PET, y = log(number_neighbours), group = Site))+
-  geom_boxplot()+
-  geom_jitter(alpha = 0.4, colour = "dodgerblue")+
-  theme_classic()
-ggplot(growthnbhdata, aes(x = MD, y = log(number_neighbours), group = Site))+
-  geom_boxplot()+
-  geom_jitter(alpha = 0.4, colour = "dodgerblue", position = (position_jitter(width = 5)))+
-  theme_classic()
-#Plotting neighbour basal area against PPT/PET/MD
-ggplot(growthnbhdata, aes(x = PPT, y = sqrt(total_nbh_ba), group = Site))+
-  geom_boxplot()+
-  geom_jitter(alpha = 0.4, colour = "dodgerblue", position = (position_jitter(width = 5)))+
-  theme_classic()
-ggplot(growthnbhdata, aes(x = PET, y = sqrt(total_nbh_ba), group = Site))+
-  geom_boxplot()+
-  geom_jitter(alpha = 0.4, colour = "dodgerblue", position = (position_jitter(width = 5)))+
-  theme_classic()
-ggplot(growthnbhdata, aes(x = MD, y = sqrt(total_nbh_ba), group = Site))+
-  geom_boxplot()+
-  geom_jitter(alpha = 0.4, colour = "dodgerblue", position = (position_jitter(width = 5)))+
-  theme_classic()
-
 ##### Do neighbour basal area or density influence growth? ####
 #Basal area
 ggplot(growthnbhdata, aes(x = sqrt(total_nbh_ba), y = sqrt(growth_rate)))+
@@ -506,8 +635,6 @@ ggplot(growthnbhdata, aes(x = log(number_neighbours), y = sqrt(growth_rate)))+
   facet_wrap(~Focal_sp)
 
 #### Making a map of study sites ####
-library(sf)
-library(dplyr)
 #Read in the SA2 shapefile downloaded from the ABS
 #Data from ABS localities
 # https://www.abs.gov.au/AUSSTATS/abs@.nsf/DetailsPage/1270.0.55.001July%202016?OpenDocument
@@ -593,7 +720,27 @@ ggplot()+
   theme(panel.border = element_rect(colour = "black", fill=NA, size = 1.5))
 dev.off()
 
+#### Table of sample sizes and site climate ####
+samplesizes <- onerowdata %>% group_by(Site, Focal_sp) %>% 
+  summarise(number_focals = n())
+samplesizes_long <- samplesizes %>% pivot_wider(id_cols = Site, names_from = Focal_sp, values_from = number_focals)
+site_climate <- onerowdata %>% group_by(Site, PPT, MD) %>% 
+  select(Site, PPT, MD, period_rainfall, period_md) %>% filter(row_number() == 1)
+site_table <- left_join(site_climate, samplesizes_long)
+site_table <- site_table %>% replace(is.na(.), 0)
+#Rearranging rows by site from wettest to driest
+site_table <- site_table %>% arrange(desc(MD))
+#Renaming column names
+colnames(site_table) <- c('Site', 'Mean PPT', "Mean MD", "Period PPT", "Period MD", "E. amygdalina", "E. ovata", "E. viminalis", "E. obliqua")
 
+site_table %>%
+  kbl(caption = "<b>Supplementary 1</b>. Number of focal trees and climate at each site ordered from driest to wettest based on mean annual moisture deficit (MD). Mean annual precipitation (PPT) and MD downloaded 
+  from the Global Aridity and PET Database (Zomer et al. 2006) based on 1960-1990 WorldClim climate averages (Hijmans et al. 2005). PPT and MD over the study period 
+  downloaded from BOM (ref*). MER is Mersey River Conservation Area, DOG is Dogs Head Regional Reserve, TMP is Tasman National Park, BOF is Doctors Peak Regional Reserve, 
+      EPF is Tom Gibson Nature Reserve, FREY is Apslawn Forest Reserve and GRA is Gravelly Ridge Conservation Area.", digits = 0) %>%
+  kable_classic(full_width = F, html_font = "Times") %>%
+  row_spec(0, italic = T) %>%
+  add_header_above(c(" " = 5, "Number of focal trees" = 4))
 
 
 ### BELOW HERE NEEDS TO BE UPDATED ####

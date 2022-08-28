@@ -44,6 +44,7 @@ trees_to_remove <- read_csv("Data/trees_to_remove.csv")
 growthdata <- anti_join(growthdata, trees_to_remove, by = c("Site", "Focal_sp", "Plot", "Tree"))
 
 ## Want to calculate growth as a rate, as different number of days between notching and growth measurements
+#this dates_growth_and_bom_sites file also has info on nearest BOM site
 datesdataraw <- read_csv("Data/dates_growth_and_bom_sites.csv")
 #Making period a factor
 growthdata$Period <- as.factor(growthdata$Period)
@@ -53,11 +54,11 @@ datesdata <- datesdataraw %>% select(Site, Period, Days_growth_since_notching)
 growthdata <- left_join(growthdata, datesdata, by = c("Site", "Period"))
 
 #Different units for growth at the moment. 2021 in mm and 2022 in cm. Converting 2022 growth cm to mm.
-# Multiplying growth for period 2 by 10 so that it is in mm as well.
-# Note that this is not true growth but instead the distance of dendrometer from time '0'
-#so true growth for period 2 is 'growth' minus growth in period 1
+# Multiplying growth for period 2 by 10 so that it is in mm as well
 growthdata$Growth[growthdata$Period==2] <- growthdata$Growth[growthdata$Period==2]*10
 
+# Note that this is not true growth but instead the distance of dendrometer from time '0'
+#so true growth for period 2 is 'growth' minus growth in period 1
 #Creating a column for true growth
 #Period 1 = growth
 # Period 2 = growth period 2 - growth period 1
@@ -69,12 +70,13 @@ growthdata$true_growth[growthdata$Period==2] <- growthdata$Growth[growthdata$Per
 growthdata$days_in_period <- growthdata$Days_growth_since_notching
 growthdata$days_in_period[growthdata$Period==2] <- growthdata$Days_growth_since_notching[growthdata$Period==2]-growthdata$Days_growth_since_notching[growthdata$Period==1]
 
-#Removing these period 1 values that were notched in period 1 so only have period 2 values:
+#Removing the period 1 values that were notched in period 1 so therefore only have period 2 values:
 # GRA OBLI A 10, DOG AMYG B8, EPF AMYG B6
 growthdata <- growthdata %>% filter(!((Period == "1" & Site == "GRA" & Focal_sp == "OBLI" & Plot == "A" & Tree == "10")))
 growthdata <- growthdata %>% filter(!((Period == "1" & Site == "DOG" & Focal_sp == "AMYG" & Plot == "B" & Tree == "8")))
 growthdata <- growthdata %>% filter(!((Period == "1" & Site == "EPF" & Focal_sp == "AMYG" & Plot == "B" & Tree == "6")))
 #Need to adjust their period 2 values which are currently NAs, setting true growth value to growth value
+# and yes need to use growth here, not true_growth, since growth only represents period 2 anyway
 # had to remove them after calculations otherwise unequal number for period 2 - period 1
 growthdata <- within(growthdata, true_growth[Site == "GRA" & Focal_sp == "OBLI" & Plot == "A" & Tree == "10"] <- growthdata$Growth[Site == "GRA" & Focal_sp == "OBLI" & Plot == "A" & Tree == "10"])
 growthdata <- within(growthdata, true_growth[Site == "DOG" & Focal_sp == "AMYG" & Plot == "B" & Tree == "8"] <- growthdata$Growth[Site == "DOG" & Focal_sp == "AMYG" & Plot == "B" & Tree == "8"])
@@ -89,7 +91,8 @@ growthdata$growth_no_negs <- as.numeric(growthdata$growth_no_negs)
 growthdata <- growthdata %>% mutate(growth_rate = growth_no_negs/days_in_period)
 
 #Making initial DBH (DBH_cm) numeric (inputted with some unknown characters)
-#do this: remove unknown DBH values
+#check this: remove unknown DBH values?? GRA OVAT A4 and GRA VIMI A8. Make sure DBH of these 
+# is measured next time I survey! Can back-calculate it from growth
 growthdata$DBH_cm <- as.numeric(growthdata$DBH_cm)
 
 #### Calculate period rainfall ####
@@ -105,6 +108,7 @@ bom_bof <- read_csv("Data/BOF_all.csv")
 #Calculate number of days between Approx_date_band_notched and Date_growth_measured for Period 1
 # and for period 2: Date_growth_measured[Period=1] and Date_growth_measured[Period=2]
 #from datesdataraw dataset
+# check this: not sure I meant above?? Already have period_growth/days_since_notching
 
 #Creating dataset to put period data into
 period_rainfall_data <- datesdata %>% select(Site, Period) %>% mutate(period_rainfall = 1)
@@ -188,6 +192,7 @@ period_rainfall_data <- within(period_rainfall_data, period_rainfall[Period == '
 
 ### Do this * Need to relativise these observed values with the expected rainfall amounts
 #based on long-term monthly averages
+#Only relativise if long-term and short-term are correlated
 
 #### Import period BOM evapotranspiration data calculated from as close by as possible
 #Creating table to put evapotranspiration data into
@@ -613,6 +618,19 @@ period_climate <- period_climate %>% mutate(period_md = period_evapo - period_ra
 ## Merging into growth data
 growthdata <- left_join(growthdata, period_climate)
 
+#### Standardising period and long-term climate ####
+#Need this to be per day to be able to compare
+# at the moment the periods are variable and long-term is based on one year
+
+#long-term climate
+growthdata <- growthdata %>% mutate(daily_ppt = PPT/365,
+                        daily_pet = PET/365,
+                        daily_md = MD/365)
+# period climate
+growthdata <- growthdata %>% mutate(daily_period_rainfall = period_rainfall/days_in_period,
+                                    daily_period_evapo = period_evapo/days_in_period,
+                                    daily_period_md = period_md/days_in_period)
+
 ## Importing community survey data and merging it with growthalldata
 rawsurveydata <- read_csv("Data/community_surveys_data.csv", col_types = cols(.default = "?", Neighbour_DBH_cm_7 = col_double(), Neighbour_DBH_cm_8 = col_double(), Neighbour_DBH_cm_9 = col_double(), Neighbour_DBH_cm_10 = col_double(), Neighbour_DBH_cm_11 = col_double()))
 #Parsing error using just read_csv because it is deciding what is in the column from first 1000 rows
@@ -634,7 +652,6 @@ surveydata <- rawsurveydata %>% filter(!is.na(Neighbour_DBH_cm))
 #These will be dropped when I merge growth and survey data? Shouldn't be in models, but check them * to do *
 growthdata <- growthdata %>% filter(!((Site == "GRA" & Focal_sp == "VIMI" & Plot == "B" & Tree == "3")))
 surveydata <- surveydata %>% filter(!((Site == "GRA" & Focal_sp == "VIMI" & Plot == "B" & Tree == "3")))
-
 growthdata <- growthdata %>% filter(!((Site == "TMP" & Focal_sp == "OBLI" & Plot == "B" & Tree == "5")))
 surveydata <- surveydata %>% filter(!((Site == "TMP" & Focal_sp == "OBLI" & Plot == "B" & Tree == "5")))
 
@@ -670,24 +687,27 @@ surveydata <- surveydata %>% mutate(Sum_nbh_DBH = `Neighbour_DBH_cm` + `Neighbou
                                       `Neighbour_DBH_cm_6` + `Neighbour_DBH_cm_7` + `Neighbour_DBH_cm_8` + 
                                       `Neighbour_DBH_cm_9` + `Neighbour_DBH_cm_10` + `Neighbour_DBH_cm_11`)
 
-#### Plotting data! To see how much survey info (for fun)
+#### Plotting data! To see how much survey info
+# dev.off()
+# pdf("Output/Neighbour_size.pdf")
 # ggplot(surveydata, aes(x = Neighbour_sp_ID, y = log(Sum_nbh_DBH)))+
-#   geom_jitter(alpha=0.1)+
+#   geom_boxplot()+
+#   geom_jitter(alpha=0.1, colour = "forestgreen", width = 0.05, height = 0.05)+
 #   theme_classic()+
 #   theme(axis.text.x = element_text(angle = 90))
-
-# test <- surveydata %>% filter(Neighbour_distance_m < 10)
 # dev.off()
-# pdf("Test_neighbour_fig.pdf")
-# ggplot(test, aes(x = Neighbour_distance_m, y = log(Sum_nbh_DBH)))+
+
+# dev.off()
+# pdf("Output/Neighbour_size_distance.pdf")
+# ggplot(surveydata, aes(x = Neighbour_distance_m, y = log(Sum_nbh_DBH)))+
 #   geom_point(aes(col = Neighbour_sp_ID), alpha=0.1)+
 #   theme_classic()+
 #   theme(legend.position = "bottom", legend.key.size = unit(0.2, "cm"), legend.title = NULL)
 # dev.off()
-# # legend.key.width=unit(0.01,"cm")
+# legend.key.width=unit(0.01,"cm")
 ####
 
-#### Calculating total DBH of neighbours and number of neighbours
+#### Calculating total DBH of neighbours and number of neighbours ####
 # Can't add DBHs, so need to calculate basal area and sum that
 #Basal area = pi * radius^2
 # = pi * (diameter/2)^2
@@ -719,47 +739,90 @@ dbhdatatomerge <- growthdata %>% group_by(Site, Focal_sp, Plot, Tree) %>%
   filter(row_number() == 1) %>% select(Site, Focal_sp, Plot, Tree, DBH_cm)
 surveydata <- left_join(surveydata, dbhdatatomerge)
 #Calculating NCI at individual neighbour level
-surveydata <- surveydata %>% mutate(NCI_nbh = Neighbour_DBH_cm/(DBH_cm*Neighbour_distance_m))
-testing <- surveydata
-#Calculating total NCI by focal tree
+#Canham 2004 - NCiintra = sum
+#basal area/distance^2
+#square - non-linear response based on distance
+#linear decay if just distance
+#Uriarte
+#used to have: NCI_nbh = Neighbour_DBH_cm/(DBH_cm*Neighbour_distance_m)
+# but we will instead include DBH_cm*NCI in the model 
+
+#Calculating total, intra and inter NCI by focal tree
+surveydata <- surveydata %>% mutate(NCI_nbh = Neighbour_DBH_cm/Neighbour_distance_m)
+
+#Need to change Focal_sp names to full scientific names for matching to work
+#Actually will do it the other way
+surveydata <- within(surveydata, Neighbour_sp_ID[Neighbour_sp_ID == 'Eucalyptus amygdalina'] <- 'AMYG')
+surveydata <- within(surveydata, Neighbour_sp_ID[Neighbour_sp_ID == 'Eucalyptus obliqua'] <- 'OBLI')
+surveydata <- within(surveydata, Neighbour_sp_ID[Neighbour_sp_ID == 'Eucalyptus ovata'] <- 'OVAT')
+surveydata <- within(surveydata, Neighbour_sp_ID[Neighbour_sp_ID == 'Eucalyptus viminalis'] <- 'VIMI')
+
+surveydata$Matching <- surveydata$Focal_sp == surveydata$Neighbour_sp_ID
+surveydata$Matching <- ifelse(surveydata$Matching == TRUE, 1, 0)
+
+#Need na.rm = TRUE, but also then need to set 0 NCIs to NA
+#Actually I think keeping them as 0s is good!
 totalncidata <- surveydata %>% group_by(Site, Focal_sp, Plot, Tree) %>%
-  summarise(total_nci = sum(NCI_nbh, na.rm = TRUE))
+  summarise(total_nci = sum(NCI_nbh, na.rm = TRUE),
+            intra_nci = sum(NCI_nbh[Matching == "1"], na.rm = TRUE),
+            inter_nci = sum(NCI_nbh[Matching == "0"], na.rm = TRUE))
+
 surveydata <- left_join(surveydata, totalncidata)
 
 ### Selecting columns to merge with growth data
 surveysimple <- surveydata %>% group_by(Site, Focal_sp, Plot, Tree) %>% 
   filter(row_number() == 1) %>% select(Site, Focal_sp, Plot, Tree, 
-                                       total_nbh_ba, number_neighbours, total_nci)
-
+                                       total_nbh_ba, number_neighbours, 
+                                       total_nci, intra_nci, inter_nci)
 #Merging neighbour data with growth rate data
 #get NAs in total_nci after merging growthdata and surveysimple here
-#13 trees that are in growth data but not in surveysimple
 #some rows are NA because either no nbh dbh, no focal dbh or no nbh distance
+#13 trees that are in growth data but not in surveysimple
 # here **
+#TMP OBLI B4, DOGOBLIB2, DOGVIMIB5, DOGVIMIC4,
+#GRAOBLIB6, GRAOVATA1, GRAVIMIA7, GRAVIMIB4, BOFVIMIB4
+#test <- anti_join(growthdata, surveysimple)
+### Do this - gra amyg c1 / resurveyed plots, adjust them
+
 growthnbhdata <- left_join(growthdata, surveysimple, by = c("Site", "Focal_sp", "Plot", "Tree"))
 
-test <- anti_join(growthdata, surveysimple)
-## Making a simplified dataset with summary data
+## Making a simplified dataset with summary data ####
 growthnbhdata <- growthnbhdata %>% select(Site, Focal_sp, Plot, Tree, Period, Growth,
                                           DBH_cm, Site_name, PPT, PET, MD, period_rainfall, period_md,
+                                          daily_ppt, daily_pet, daily_md, daily_period_rainfall, daily_period_evapo, daily_period_md,
                                           growth_no_negs, growth_rate,
-                                          total_nbh_ba, number_neighbours, total_nci)
+                                          total_nbh_ba, number_neighbours, total_nci, intra_nci, inter_nci)
 
-## Standardising NCI to a mean of 0 and SD of 1, first creating logged version
-growthnbhdata <- growthnbhdata %>% mutate(log_nci = log(total_nci))
-#Figure out why scaling nci isn't working!! *
-growthnbhdata$std_nci <- scale(growthnbhdata$log_nci, center = TRUE, scale = TRUE)[,1]
+## Standardising NCIs to a mean of 0 and SD of 1, first creating logged version
+#Intra and inter have zero values so adding 1 before logging
+#test <- growthnbhdata %>% filter(is.na(total_nci))
+#Check why I have 20 total, inter and intra NAs. Some may be resurveyed gra?
+#for now, removing them
+growth_nbh_no_na <- growthnbhdata %>% filter(!((is.na(total_nci | intra_nci | inter_nci))))
+#Replacing growthnbhdata, clean this later* to do
+growthnbhdata <- growth_nbh_no_na
+growthnbhdata <- growthnbhdata %>% mutate(log_total_nci = log(total_nci))
+growthnbhdata <- growthnbhdata %>% mutate(log_p1_intra_nci = log(intra_nci+1))
+growthnbhdata <- growthnbhdata %>% mutate(log_p1_inter_nci = log(inter_nci+1))
+
+growthnbhdata$std_total_nci <- scale(growthnbhdata$log_total_nci, center = TRUE, scale = TRUE)[,1]
+growthnbhdata$std_intra_nci <- scale(growthnbhdata$log_p1_intra_nci, center = TRUE, scale = TRUE)[,1]
+growthnbhdata$std_inter_nci <- scale(growthnbhdata$log_p1_inter_nci, center = TRUE, scale = TRUE)[,1]
 #Scaling initial DBH too
 growthnbhdata <- growthnbhdata %>% mutate(sqrt_dbh = sqrt(DBH_cm))
 growthnbhdata$std_dbh <- scale(growthnbhdata$sqrt_dbh, center = TRUE, scale = TRUE)[,1]
-#Scaling PPT
+#Scaling long-term climate
+#Not sure I need to scale these - check*
 growthnbhdata$std_ppt <- scale(growthnbhdata$PPT, center = TRUE, scale = TRUE)[,1]
-#Scaling MD
 growthnbhdata$std_md <- scale(growthnbhdata$MD, center = TRUE, scale = TRUE)[,1]
+growthnbhdata$std_daily_ppt <- scale(growthnbhdata$daily_ppt, center = TRUE, scale = TRUE)[,1]
+growthnbhdata$std_daily_md <- scale(growthnbhdata$daily_md, center = TRUE, scale = TRUE)[,1]
 #Scaling period rainfall
 growthnbhdata$period_rainfall <- as.numeric(growthnbhdata$period_rainfall)
 growthnbhdata$std_prain <- scale(growthnbhdata$period_rainfall, center = TRUE, scale = TRUE)[,1]
 growthnbhdata$std_period_md <- scale(growthnbhdata$period_md, center = TRUE, scale = TRUE)[,1]
+growthnbhdata$std_daily_prain <- scale(growthnbhdata$daily_period_rainfall, center = TRUE, scale = TRUE)[,1]
+growthnbhdata$std_daily_period_md <- scale(growthnbhdata$daily_period_md, center = TRUE, scale = TRUE)[,1]
 
 ##Adjusting names of some plots
 #GRA OVAT A 3 and GRA OVAT A 4 - notes say 'this is a VIMI'
@@ -771,9 +834,24 @@ growthnbhdata <- within(growthnbhdata, Plot[Site == 'GRA' & Focal_sp == 'OVAT' &
 growthnbhdata <- within(growthnbhdata, Focal_sp[Site == 'GRA' & Focal_sp == 'OVAT' & Plot == 'Z' & Tree == '4'] <- 'VIMI')
 
 ## Removing dodgy values where the band came off etc. See notes, many things to adjust.
-# do this!
+# do this!*
 #EPF VIMI B1 is an ovata. Updating this to OVAT Z1 (adjust plot later!)
 growthnbhdata <- within(growthnbhdata, Plot[Site == 'EPF' & Focal_sp == 'VIMI' & Plot == 'B' & Tree == '1'] <- 'Z')
 growthnbhdata <- within(growthnbhdata, Focal_sp[Site == 'EPF' & Focal_sp == 'VIMI' & Plot == 'Z' & Tree == '1'] <- 'OVAT')
 
-onerowdata <- growthnbhdata %>% filter(Period==1)
+#Renaming species' names from AMYG to Eucalyptus amygdalina etc.
+#not working atm **
+# growthnbhdata <- growthnbhdata %>% mutate(Focal_sp = recode(Focal_sp, "AMYG" = "Eucalyptus amygdalina",
+#                                                       "OBLI" = "Eucalyptus obliqua",
+#                                                       "OVAT" = "Eucalyptus ovata",
+#                                                       "VIMI" = "Eucalyptus viminalis"))
+
+#Note that this onerowdata isn't quite right - not equal # of growth values for period 1 and 2
+onerowdata <- growthnbhdata %>% filter(Period==2)
+
+## Splitting by species
+amygdata <- growthnbhdata %>% filter(Focal_sp == 'AMYG')
+oblidata <- growthnbhdata %>% filter(Focal_sp == 'OBLI')
+ovatdata <- growthnbhdata %>% filter(Focal_sp == 'OVAT')
+vimidata <- growthnbhdata %>% filter(Focal_sp == 'VIMI')
+
