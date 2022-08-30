@@ -2,7 +2,7 @@
 # Alexandra Catling PhD Research
 # Started 26/02/2021
 
-#### Importing data and packages ####
+###### Importing data and packages ####
 source("data_preparations.R")
 
 library(kableExtra)
@@ -50,7 +50,7 @@ hist(log(growthnbhdata$intra_nci))
 hist(growthnbhdata$inter_nci)
 hist(log(growthnbhdata$inter_nci))
 
-##### Is initial DBH evenly distributed across species? ####
+#### Is initial DBH evenly distributed across species? ####
 # There are two trees that I have growth data for but no initial DBH measurements - "UN"
 # Have to remove these
 # dbhnumeric <- growthnbhdata %>% filter(DBH_cm != "UN") %>% 
@@ -85,7 +85,7 @@ min(dbhnumeric$PPT)
 max(dbhnumeric$PPT)
 mean(dbhnumeric$PPT)
 sd(dbhnumeric$PPT)
-######### Does initial DBH predict growth rate? ####
+#### Does initial DBH predict growth rate? ####
 #shape = Period
 ggplot(growthnbhdata, aes(x = sqrt(DBH_cm), y = sqrt(growth_rate)))+
   geom_point(aes(colour = Period), alpha = 0.5)+
@@ -131,7 +131,7 @@ plot(vimidharma)
 #p<0.01, residuals good
 
 
-####### Do growth rates differ across species? ####
+#### Do growth rates differ across species? ####
 #Growth rate by period
 meangrowth <- growthnbhdata %>%
   group_by(Focal_sp) %>%
@@ -178,7 +178,7 @@ modelperiod <- aov(sqrt(growth_rate) ~ Period, vimidata)
 summary(modelperiod)
 #no for amyg, yes for obli, no for ovat, no for vimi
 
-###### What neighbours do we find at each site? ####
+#### What neighbours do we find at each site? ####
 ## Do this in a loop for all sites:
 listnbhgravelly <- surveydata %>% filter(Site == "GRA") %>% 
   group_by(Neighbour_sp_ID) %>% filter(row_number() == 1) %>%
@@ -186,7 +186,7 @@ listnbhgravelly <- surveydata %>% filter(Site == "GRA") %>%
 ## Or just this but not sorted:
 listneighboursbysite <- surveydata %>% group_by(Site, Neighbour_sp_ID) %>% filter(row_number() == 1) %>%
   select(Site, Neighbour_sp_ID)
-##### Do NCI, basal area or density (number of neighbours) vary by site? ####
+#### Do NCI, basal area or density (number of neighbours) vary by site? ####
 ### NCI
 growthnbhdata %>% mutate(Site = fct_reorder(Site, desc(MD))) %>%
   ggplot(aes(x = Site, y = total_nbh_ba))+
@@ -351,34 +351,6 @@ ggplot(growthnbhdata, aes(x = daily_md, y = daily_period_md))+
   xlab("daily long-term md")+
   theme_classic()
 
-#### Plotting growth ~ period rainfall ####
-
-dev.off()
-pdf("Output/growth_rate~period_rainfall.pdf", width=21, height=21)
-par(pty="s")
-ggplot(growthnbhdata, aes(x = period_rainfall, y = sqrt(growth_rate), colour = Period))+
-  geom_jitter(alpha = 0.5, cex = 3)+
-  geom_smooth(method="lm")+
-  xlab("Rainfall in growth period (mm)")+
-  ylab("sqrt(growth rate (mm/day))")+
-  theme_classic()+
-  theme(text = element_text(size = 20))
-dev.off()
-
-#May be quadratic response to rainfall.
-#Not how my hypothesis is set up
-modelperiodppt <- lmer(sqrt(growth_rate) ~ std_prain + I(std_prain^2) + (1|Site/Plot/Tree), growthnbhdata)
-summary(modelperiodppt)
-
-##### Research questions: Climate vs competition #####
-# How does sensitivity of growth to climate vary with competition?
-#only looking at MD
-
-#Create plot with growth rate on y axis, moisture on x axis
-# and two fitted lines and CIs for sparse neighbourhood and dense neighbourhood
-with(growthnbhdata, plot(sqrt(growth_rate) ~ MD))
-with(growthnbhdata, plot(sqrt(growth_rate) ~ log(total_nci)))
-
 #### Plot the number of conspecifics and heterospecifics for each sp ####
 ggplot(onerowdata, aes(x = sqrt(growth_rate), y = std_intra_nci))+
   geom_point(alpha = 0.3)+
@@ -392,7 +364,129 @@ ggplot(onerowdata, aes(x = sqrt(growth_rate), y = std_inter_nci))+
   theme_classic()+
   facet_wrap(~Focal_sp)
 
-#### Main models by species ####
+
+#### Simple quadratic plots growth ~ NCI, period MD, long-term MD ####
+
+### period rainfall
+dev.off()
+pdf("Output/growth_rate~period_rainfall.pdf", width=21, height=21)
+par(pty="s")
+ggplot(growthnbhdata, aes(x = period_rainfall, y = sqrt(growth_rate), colour = Period))+
+  geom_jitter(alpha = 0.5, cex = 3)+
+  geom_smooth(method="lm")+
+  xlab("Rainfall in growth period (mm)")+
+  ylab("sqrt(growth rate (mm/day))")+
+  theme_classic()+
+  theme(text = element_text(size = 20))
+dev.off()
+
+### period MD quadratic relationship?
+## Only AMYG quadratic, others linear
+for (i in 1:length(speciesabbrevlist)){
+  print(speciesabbrevlist[i])
+  growthquadperiodmd <- lmer(sqrt(growth_rate) ~ std_period_md + I(std_period_md^2) + (1|Site/Plot/Tree), data = filter(growthnbhdata, Focal_sp == speciesabbrevlist[i]))
+  print(summary(growthquadperiodmd))
+}
+#Plotting if quadratic to double check
+#This produces a plot that plots quadratic responses if the quadratic term is < 0.05, otherwise linear plot
+dev.off()
+pdf("Output/growth~period_md_if_quad.pdf", width=21, height=21)
+par(mfrow=c(2,2))
+par(mar=c(4,6,2,1))
+par(pty="s")
+for(i in 1:length(specieslist)){
+  plotted.data<-as.data.frame(specieslist[i])
+  plot(jitter(sqrt(plotted.data$growth_rate), amount = 0.05) ~ plotted.data$std_period_md, pch=19, col="grey60", ylab="Growth rate (sqrt, standardised)", xlab="Period MD (standardised)", cex.lab=2, cex.axis=2.00,tck=-0.01)
+  mtext(paste(letters[i], ")", sep=""), side=2,line=1,adj=1.5,las=1, padj=-13, cex=1.5)
+  title(main=bquote(italic(.(speciesnamelist[i]))), cex.main=2.5)
+  x_to_plot<-seq.func(plotted.data$std_period_md) 
+  model<-lmer(sqrt(growth_rate) ~ std_period_md + I(std_period_md^2) + (1|Site/Plot/Tree), plotted.data)
+  model2<-lmer(sqrt(growth_rate) ~ std_period_md + (1|Site/Plot/Tree), plotted.data)
+    if(summary(model)$coefficients[3,5]<0.05){
+    preddata <- with(model, data.frame(1, x_to_plot, x_to_plot^2))
+    plotted.pred <- glmm.predict(mod = model, newdat = preddata, se.mult = 1.96, logit_link=FALSE, log_link=FALSE, glmmTMB=FALSE)
+    plot.CI.func(x.for.plot = x_to_plot, pred = plotted.pred$y, upper = plotted.pred$upper, lower = plotted.pred$lower, env.colour = "grey1", env.trans = 50, line.colour = "black", line.weight = 2, line.type = 1)
+  }else{
+    preddata <- with(model2, data.frame(1, x_to_plot))
+    plotted.pred <- glmm.predict(mod = model2, newdat = preddata, se.mult = 1.96, logit_link=FALSE, log_link=FALSE, glmmTMB=FALSE)
+    plot.CI.func(x.for.plot = x_to_plot, pred = plotted.pred$y, upper = plotted.pred$upper, lower = plotted.pred$lower, env.colour = "grey1", env.trans = 50, line.colour = "black", line.weight = 2, line.type = 1)
+  }
+}
+dev.off()
+
+### NCI quadratic relationship?
+## All linear
+for (i in 1:length(speciesabbrevlist)){
+  print(speciesabbrevlist[i])
+  growthquadnci <- lmer(sqrt(growth_rate) ~ std_total_nci + I(std_total_nci^2) + (1|Site/Plot/Tree), data = filter(growthnbhdata, Focal_sp == speciesabbrevlist[i]))
+  print(summary(growthquadnci))
+}
+#Plotting if quadratic 
+dev.off()
+pdf("Output/growth~total_nci_if_quad.pdf", width=21, height=21)
+par(mfrow=c(2,2))
+par(mar=c(4,6,2,1))
+par(pty="s")
+for(i in 1:length(specieslist)){
+  plotted.data<-as.data.frame(specieslist[i])
+  plot(jitter(sqrt(plotted.data$growth_rate), amount = 0.05) ~ plotted.data$std_total_nci, pch=19, col="grey60", ylab="Growth rate (sqrt, standardised)", xlab="Total NCI (log, standardised)", cex.lab=2, cex.axis=2.00,tck=-0.01)
+  mtext(paste(letters[i], ")", sep=""), side=2,line=1,adj=1.5,las=1, padj=-13, cex=1.5)
+  title(main=bquote(italic(.(speciesnamelist[i]))), cex.main=2.5)
+  x_to_plot<-seq.func(plotted.data$std_total_nci) 
+  model<-lmer(sqrt(growth_rate) ~ std_total_nci + I(std_total_nci^2) + (1|Site/Plot/Tree), plotted.data)
+  model2<-lmer(sqrt(growth_rate) ~ std_total_nci + (1|Site/Plot/Tree), plotted.data)
+  if(summary(model)$coefficients[3,5]<0.05){
+    preddata <- with(model, data.frame(1, x_to_plot, x_to_plot^2))
+    plotted.pred <- glmm.predict(mod = model, newdat = preddata, se.mult = 1.96, logit_link=FALSE, log_link=FALSE, glmmTMB=FALSE)
+    plot.CI.func(x.for.plot = x_to_plot, pred = plotted.pred$y, upper = plotted.pred$upper, lower = plotted.pred$lower, env.colour = "grey1", env.trans = 50, line.colour = "black", line.weight = 2, line.type = 1)
+  }else{
+    preddata <- with(model2, data.frame(1, x_to_plot))
+    plotted.pred <- glmm.predict(mod = model2, newdat = preddata, se.mult = 1.96, logit_link=FALSE, log_link=FALSE, glmmTMB=FALSE)
+    plot.CI.func(x.for.plot = x_to_plot, pred = plotted.pred$y, upper = plotted.pred$upper, lower = plotted.pred$lower, env.colour = "grey1", env.trans = 50, line.colour = "black", line.weight = 2, line.type = 1)
+  }
+}
+dev.off()
+
+### Long-term MD quadratic relationship?
+## All linear
+# problem with OVAT model?
+for (i in 1:length(speciesabbrevlist)){
+  print(speciesabbrevlist[i])
+  growthquadnci <- lmer(sqrt(growth_rate) ~ std_md + I(std_md^2) + (1|Site/Plot/Tree), data = filter(growthnbhdata, Focal_sp == speciesabbrevlist[i]))
+  print(summary(growthquadnci))
+}
+#Plotting if quadratic 
+dev.off()
+pdf("Output/growth~longterm_md_if_quad.pdf", width=21, height=21)
+par(mfrow=c(2,2))
+par(mar=c(4,6,2,1))
+par(pty="s")
+for(i in 1:length(specieslist)){
+  plotted.data<-as.data.frame(specieslist[i])
+  plot(jitter(sqrt(plotted.data$growth_rate), amount = 0.05) ~ plotted.data$std_md, pch=19, col="grey60", ylab="Growth rate (sqrt, standardised)", xlab="Long-term MD (standardised)", cex.lab=2, cex.axis=2.00,tck=-0.01)
+  mtext(paste(letters[i], ")", sep=""), side=2,line=1,adj=1.5,las=1, padj=-13, cex=1.5)
+  title(main=bquote(italic(.(speciesnamelist[i]))), cex.main=2.5)
+  x_to_plot<-seq.func(plotted.data$std_md) 
+  model<-lmer(sqrt(growth_rate) ~ std_md + I(std_md^2) + (1|Site/Plot/Tree), plotted.data)
+  model2<-lmer(sqrt(growth_rate) ~ std_md + (1|Site/Plot/Tree), plotted.data)
+  if(summary(model)$coefficients[3,5]<0.05){
+    preddata <- with(model, data.frame(1, x_to_plot, x_to_plot^2))
+    plotted.pred <- glmm.predict(mod = model, newdat = preddata, se.mult = 1.96, logit_link=FALSE, log_link=FALSE, glmmTMB=FALSE)
+    plot.CI.func(x.for.plot = x_to_plot, pred = plotted.pred$y, upper = plotted.pred$upper, lower = plotted.pred$lower, env.colour = "grey1", env.trans = 50, line.colour = "black", line.weight = 2, line.type = 1)
+  }else{
+    preddata <- with(model2, data.frame(1, x_to_plot))
+    plotted.pred <- glmm.predict(mod = model2, newdat = preddata, se.mult = 1.96, logit_link=FALSE, log_link=FALSE, glmmTMB=FALSE)
+    plot.CI.func(x.for.plot = x_to_plot, pred = plotted.pred$y, upper = plotted.pred$upper, lower = plotted.pred$lower, env.colour = "grey1", env.trans = 50, line.colour = "black", line.weight = 2, line.type = 1)
+  }
+}
+dev.off()
+
+
+###### Research questions: climate vs competition main models #####
+# How does sensitivity of growth to climate vary with competition?
+#only looking at MD
+
+####  Main models by species
 ### Total nci only model:
 #growth ~ NCI + long-term climate + period climate + NCI*period climate +
 #initial DBH + initial DBH*NCI + initial DBH*period climate +(1|Site/Plot/Tree)
@@ -485,7 +579,8 @@ vif(oblimod1)
 #very bad vifs for NCI and period MD
 
 ### OVAT ####
-ovatmod1 <- lmer(sqrt(growth_rate) ~ std_total_nci + std_md + std_period_md + 
+#model won't converge using standardised dbh_cm.
+ovatmod1 <- lmer(sqrt(growth_rate) ~ std_total_nci + DBH_cm + std_period_md + 
                    std_total_nci*std_period_md + DBH_cm + DBH_cm*std_total_nci +
                    DBH_cm*std_period_md + (1|Site/Plot/Tree), ovatdata)
 ovatmod1dharma <- simulateResiduals(ovatmod1)
@@ -528,19 +623,19 @@ summary(vimimod2)
 vif(vimimod1)
 #very bad vifs for NCI, bad for period MD
 
+### AIC - Is total NCI or intra and inter better model? 
+#AMYG
+AIC(amygmod1, amygmod2)
+#mod 2 significantly better
+AIC(oblimod1, oblimod2)
+#mod 2 significantly better
+AIC(ovatmod1, ovatmod2)
+#mod 2 significantly better
+AIC(vimimod1, vimimod2)
+#mod 2 significantly better
 
-
-
-### Try removing terms to see which ones are correlated/if removing one changes others'results?
-
-#without neighbours
-
-#without long-term climate
-
-#without period climate
-
-
-#### Plotting growth rate in response to NCI from model ####
+#### Plotting growth rate ~ NCI from total NCI model ####
+#all species
 dev.off()
 pdf("Output/growth_rate~NCI.pdf", width=21, height=21)
 par(pty="s")
@@ -555,63 +650,275 @@ plotted.pred <- glmm.predict(mod = model, newdat = preddata, se.mult = 1.96, log
 plot.CI.func(x.for.plot = x_to_plot, pred = plotted.pred$y, upper = plotted.pred$upper, lower = plotted.pred$lower, env.colour = "grey1", env.trans = 50, line.colour = "black", line.weight = 2, line.type = 1)
 dev.off()
 
-#### Plotting interaction between two continuous variables ####
-#No significant interaction between PC1 and NCI
-# PPT is x
-# NCI is set at -1, 0 or 1 (1 sd low, mean, or 1 sd high)
-# with(growthnbhdata, plot(jitter(sqrt(growth_rate), amount = 0.05) ~ std_ppt, col = ifelse(std_nci>0, "red", "blue")))
+#### Growth rate ~ NCI in high or low long-term MD sites ####
+
+### AMYG
+# oh!! Is the reason why it looks like the lines don't fit the data because I am
+#colouring it by <0 or >0 but modelling it for -1 and 1??
+dev.off()
+pdf("Output/AMYG_growth_rate~NCI+MD.pdf", width=21, height=21)
+par(pty="s")
+plot(sqrt(growth_rate) ~ std_total_nci, pch = ifelse(Period==1, 19, 17), col = alpha(ifelse(std_md>0, "forestgreen", "red"), 0.4), ylab="sqrt(Growth rate (mm/day))", xlab="Neighbourhood crowding index (standardised, sqrt)", tck=-0.01, cex= 2, cex.lab = 2, cex.axis = 2, amygdata)
+model<-lmer(sqrt(growth_rate) ~ std_total_nci + std_md + std_period_md + 
+              std_total_nci*std_period_md + DBH_cm + DBH_cm*std_total_nci +
+              DBH_cm*std_period_md + (1|Site/Plot/Tree), amygdata)
+x_to_plot<-seq.func(amygdata$std_total_nci)
+#low md - red
+#preddata <- with(model, data.frame(1, 0, 0, 0, 0, -1, x_to_plot, 0*x_to_plot, 0*0, 0*0, 0*0, -1*x_to_plot))
+preddata <- with(model, data.frame(1, x_to_plot, -1, 0, mean(amygdata$DBH_cm), x_to_plot*0, x_to_plot*mean(amygdata$DBH_cm), 0*mean(amygdata$DBH_cm)))
+plotted.pred <- glmm.predict(mod = model, newdat = preddata, se.mult = 1.96, logit_link=FALSE, log_link=FALSE, glmmTMB=FALSE)
+plot.CI.func(x.for.plot = x_to_plot, pred = plotted.pred$y, upper = plotted.pred$upper, lower = plotted.pred$lower, env.colour = "grey1", env.trans = 50, line.colour = "red", line.weight = 2, line.type = 1)
+#mean md - black
+preddata <- with(model, data.frame(1, x_to_plot, 0, 0, mean(amygdata$DBH_cm), x_to_plot*0, x_to_plot*mean(amygdata$DBH_cm), 0*mean(amygdata$DBH_cm)))
+plotted.pred <- glmm.predict(mod = model, newdat = preddata, se.mult = 1.96, logit_link=FALSE, log_link=FALSE, glmmTMB=FALSE)
+plot.CI.func(x.for.plot = x_to_plot, pred = plotted.pred$y, upper = plotted.pred$upper, lower = plotted.pred$lower, env.colour = "grey1", env.trans = 50, line.colour = "black", line.weight = 2, line.type = 1)
+#high md - forest green
+preddata <- with(model, data.frame(1, x_to_plot, 1, 0, 0, x_to_plot*0, x_to_plot*0, 0*0))
+plotted.pred <- glmm.predict(mod = model, newdat = preddata, se.mult = 1.96, logit_link=FALSE, log_link=FALSE, glmmTMB=FALSE)
+plot.CI.func(x.for.plot = x_to_plot, pred = plotted.pred$y, upper = plotted.pred$upper, lower = plotted.pred$lower, env.colour = "grey1", env.trans = 50, line.colour = "forestgreen", line.weight = 2, line.type = 1)
+dev.off()
+
+### Growth rate ~ NCI given period climate ####
+#Why aren't lines fitting the data?? Fix this
+dev.off()
+pdf("Output/AMYG_growth_rate~NCI+period_MD.pdf", width=21, height=21)
+par(pty="s")
+plot(sqrt(growth_rate) ~ std_total_nci, pch = ifelse(Period==1, 19, 17), col = alpha(ifelse(std_period_md>0, "forestgreen", "red"), 0.4), ylab="sqrt(Growth rate (mm/day))", xlab="Neighbourhood crowding index (standardised, sqrt)", tck=-0.01, cex= 2, cex.lab = 2, cex.axis = 2, amygdata)
+model<-lmer(sqrt(growth_rate) ~ std_total_nci + std_md + std_period_md + 
+              std_total_nci*std_period_md + std_dbh + std_dbh*std_total_nci +
+              std_dbh*std_period_md + (1|Site/Plot/Tree), amygdata)
+x_to_plot_low<-seq.func(amygdata$std_total_nci[amygdata$std_period_md<0])
+x_to_plot_high<-seq.func(amygdata$std_total_nci[amygdata$std_period_md>0])
+#low md - red
+#fixef(model)
+preddata <- with(model, data.frame(1, x_to_plot_low, 0, -1, 0, x_to_plot_low*-1, x_to_plot_low*0, -1*0))
+plotted.pred <- glmm.predict(mod = model, newdat = preddata, se.mult = 1.96, logit_link=FALSE, log_link=FALSE, glmmTMB=FALSE)
+plot.CI.func(x.for.plot = x_to_plot_low, pred = plotted.pred$y, upper = plotted.pred$upper, lower = plotted.pred$lower, env.colour = "grey1", env.trans = 50, line.colour = "red", line.weight = 2, line.type = 1)
+#mean md - black
+# preddata <- with(model, data.frame(1, x_to_plot_high, 0, 0, 0, x_to_plot_high*0, x_to_plot_high*0, 0*0))
+# plotted.pred <- glmm.predict(mod = model, newdat = preddata, se.mult = 1.96, logit_link=FALSE, log_link=FALSE, glmmTMB=FALSE)
+# plot.CI.func(x.for.plot = x_to_plot_high, pred = plotted.pred$y, upper = plotted.pred$upper, lower = plotted.pred$lower, env.colour = "grey1", env.trans = 50, line.colour = "black", line.weight = 2, line.type = 1)
+#high md - forest green
+preddata <- with(model, data.frame(1, x_to_plot_high, 0, 1, 0, x_to_plot_high*1, x_to_plot_high*0, 1*0))
+plotted.pred <- glmm.predict(mod = model, newdat = preddata, se.mult = 1.96, logit_link=FALSE, log_link=FALSE, glmmTMB=FALSE)
+plot.CI.func(x.for.plot = x_to_plot_high, pred = plotted.pred$y, upper = plotted.pred$upper, lower = plotted.pred$lower, env.colour = "grey1", env.trans = 50, line.colour = "forestgreen", line.weight = 2, line.type = 1)
+dev.off()
+
+### Do this in a loop for all species
+## update this ** this is currently misleading because extrapolating mean values
+# for all x values....
+dev.off()
+pdf("Output/panel_growth~NCI+period_md_two_levels.pdf", width=21, height=21)
+par(mfrow=c(2,2))
+par(mar=c(4,6,2,1))
+par(pty="s")
+for(i in 1:length(specieslist)){
+  plotted.data<-as.data.frame(specieslist[i])
+  plot(sqrt(growth_rate) ~ std_total_nci, pch = ifelse(Period==1, 19, 17), col = alpha(ifelse(std_period_md>0, "red", "forestgreen"), 0.4), ylab="sqrt(Growth rate (mm/day))", xlab="Neighbourhood crowding index (standardised, sqrt)", tck=-0.01, cex= 2, cex.lab = 2, cex.axis = 2, plotted.data)
+  mtext(paste(letters[i], ")", sep=""), side=2,line=1,adj=1.5,las=1, padj=-13, cex=1.5)
+  title(main=bquote(italic(.(speciesnamelist[i]))), cex.main=2.5)
+  model<-lmer(sqrt(growth_rate) ~ std_total_nci + std_md + std_period_md + 
+                std_total_nci*std_period_md + DBH_cm + DBH_cm*std_total_nci +
+                DBH_cm*std_period_md + (1|Site/Plot/Tree), plotted.data)
+  x_to_plot_low<-seq.func(plotted.data$std_total_nci[plotted.data$std_period_md<0])
+  #x_to_plot_mean<-seq.func(plotted.data$std_total_nci)
+  x_to_plot_high<-seq.func(plotted.data$std_total_nci[plotted.data$std_period_md>0])
+  #low md - wet - green
+  preddata <- with(model, data.frame(1, x_to_plot_low, 0, -1, mean(plotted.data$DBH_cm), x_to_plot_low*-1, x_to_plot_low*mean(plotted.data$DBH_cm), -1*mean(plotted.data$DBH_cm)))
+  plotted.pred <- glmm.predict(mod = model, newdat = preddata, se.mult = 1.96, logit_link=FALSE, log_link=FALSE, glmmTMB=FALSE)
+  plot.CI.func(x.for.plot = x_to_plot_low, pred = plotted.pred$y, upper = plotted.pred$upper, lower = plotted.pred$lower, env.colour = "grey1", env.trans = 50, line.colour = "forestgreen", line.weight = 2, line.type = 1)
+  #mean md - black
+  # preddata <- with(model, data.frame(1, x_to_plot_low, 0, 0, mean(plotted.data$DBH_cm), x_to_plot_low*0, x_to_plot_low*mean(plotted.data$DBH_cm), 0*mean(plotted.data$DBH_cm)))
+  # plotted.pred <- glmm.predict(mod = model, newdat = preddata, se.mult = 1.96, logit_link=FALSE, log_link=FALSE, glmmTMB=FALSE)
+  # plot.CI.func(x.for.plot = x_to_plot_mean, pred = plotted.pred$y, upper = plotted.pred$upper, lower = plotted.pred$lower, env.colour = "grey1", env.trans = 50, line.colour = "black", line.weight = 2, line.type = 1)
+  #high md - dry - red
+  preddata <- with(model, data.frame(1, x_to_plot_high, 0, 1, mean(plotted.data$DBH_cm), x_to_plot_high*1, x_to_plot_high*mean(plotted.data$DBH_cm), 1*mean(plotted.data$DBH_cm)))
+  plotted.pred <- glmm.predict(mod = model, newdat = preddata, se.mult = 1.96, logit_link=FALSE, log_link=FALSE, glmmTMB=FALSE)
+  plot.CI.func(x.for.plot = x_to_plot_high, pred = plotted.pred$y, upper = plotted.pred$upper, lower = plotted.pred$lower, env.colour = "grey1", env.trans = 50, line.colour = "red", line.weight = 2, line.type = 1)
+  }
+dev.off()
+
+## Not sure why OVAT trendlines don't fit the data, all other sp seem fine
+#OVAT
+dev.off()
+pdf("Output/OVAT_growth_rate~NCI+period_MD.pdf", width=21, height=21)
+par(pty="s")
+plot(sqrt(growth_rate) ~ std_total_nci, pch = ifelse(Period==1, 19, 17), col = alpha(ifelse(std_period_md>0, "forestgreen", "red"), 0.4), ylab="sqrt(Growth rate (mm/day))", xlab="Neighbourhood crowding index (standardised, sqrt)", tck=-0.01, cex= 2, cex.lab = 2, cex.axis = 2, ovatdata)
+model<-lmer(sqrt(growth_rate) ~ std_total_nci + std_md + std_period_md + 
+              std_total_nci*std_period_md + DBH_cm + DBH_cm*std_total_nci +
+              DBH_cm*std_period_md + (1|Site/Plot/Tree), ovatdata)
+x_to_plot_low<-seq.func(ovatdata$std_total_nci[ovatdata$std_period_md<0])
+x_to_plot_high<-seq.func(ovatdata$std_total_nci[ovatdata$std_period_md>0])
+#low md - red
+#fixef(model)
+preddata <- with(model, data.frame(1, x_to_plot_low, 0, -1, mean(ovatdata$DBH_cm), x_to_plot_low*-1, x_to_plot_low*mean(ovatdata$DBH_cm), -1*mean(ovatdata$DBH_cm)))
+plotted.pred <- glmm.predict(mod = model, newdat = preddata, se.mult = 1.96, logit_link=FALSE, log_link=FALSE, glmmTMB=FALSE)
+plot.CI.func(x.for.plot = x_to_plot_low, pred = plotted.pred$y, upper = plotted.pred$upper, lower = plotted.pred$lower, env.colour = "grey1", env.trans = 50, line.colour = "red", line.weight = 2, line.type = 1)
+#high md - forest green
+preddata <- with(model, data.frame(1, x_to_plot_high, 0, 1, mean(ovatdata$DBH_cm), x_to_plot_high*1, x_to_plot_high*mean(ovatdata$DBH_cm), 1*mean(ovatdata$DBH_cm)))
+plotted.pred <- glmm.predict(mod = model, newdat = preddata, se.mult = 1.96, logit_link=FALSE, log_link=FALSE, glmmTMB=FALSE)
+plot.CI.func(x.for.plot = x_to_plot_high, pred = plotted.pred$y, upper = plotted.pred$upper, lower = plotted.pred$lower, env.colour = "grey1", env.trans = 50, line.colour = "forestgreen", line.weight = 2, line.type = 1)
+dev.off()
+
+#VIMI
+#Vimi has NAs for DBH, need to remove these first
+dev.off()
+pdf("Output/VIMI_growth_rate~NCI+period_MD.pdf", width=21, height=21)
+par(pty="s")
+plot(sqrt(growth_rate) ~ std_total_nci, pch = ifelse(Period==1, 19, 17), col = alpha(ifelse(std_period_md>0, "forestgreen", "red"), 0.4), ylab="sqrt(Growth rate (mm/day))", xlab="Neighbourhood crowding index (standardised, sqrt)", tck=-0.01, cex= 2, cex.lab = 2, cex.axis = 2, vimidata)
+model<-lmer(sqrt(growth_rate) ~ std_total_nci + std_md + std_period_md + 
+              std_total_nci*std_period_md + DBH_cm + DBH_cm*std_total_nci +
+              DBH_cm*std_period_md + (1|Site/Plot/Tree), vimidata)
+x_to_plot_low<-seq.func(vimidata$std_total_nci[vimidata$std_period_md<0])
+x_to_plot_high<-seq.func(vimidata$std_total_nci[vimidata$std_period_md>0])
+#low md - red
+#fixef(model)
+preddata <- with(model, data.frame(1, x_to_plot_low, 0, -1, mean(vimidata$DBH_cm), x_to_plot_low*-1, x_to_plot_low*mean(vimidata$DBH_cm), -1*mean(vimidata$DBH_cm)))
+plotted.pred <- glmm.predict(mod = model, newdat = preddata, se.mult = 1.96, logit_link=FALSE, log_link=FALSE, glmmTMB=FALSE)
+plot.CI.func(x.for.plot = x_to_plot_low, pred = plotted.pred$y, upper = plotted.pred$upper, lower = plotted.pred$lower, env.colour = "grey1", env.trans = 50, line.colour = "red", line.weight = 2, line.type = 1)
+#high md - forest green
+preddata <- with(model, data.frame(1, x_to_plot_low, 0, 1, mean(vimidata$DBH_cm), x_to_plot_low*1, x_to_plot_low*mean(vimidata$DBH_cm), 1*mean(vimidata$DBH_cm)))
+plotted.pred <- glmm.predict(mod = model, newdat = preddata, se.mult = 1.96, logit_link=FALSE, log_link=FALSE, glmmTMB=FALSE)
+plot.CI.func(x.for.plot = x_to_plot_high, pred = plotted.pred$y, upper = plotted.pred$upper, lower = plotted.pred$lower, env.colour = "grey1", env.trans = 50, line.colour = "forestgreen", line.weight = 2, line.type = 1)
+dev.off()
+
+### ggplot
+ggplot(growthnbhdata, aes(x = std_total_nci, y = sqrt(growth_rate), colour = site_climate))+
+  geom_point(alpha = 0.3)+
+  geom_smooth(method="lm")+
+  theme_classic()+
+  facet_wrap(~Focal_sp)
+
+## boxplot?
+ggplot(growthnbhdata, aes(x = site_climate, y = sqrt(growth_rate)))+
+  geom_boxplot()+
+  geom_jitter(alpha = 0.3)+
+  geom_smooth(method="lm")+
+  theme_classic()+
+  facet_wrap(~Focal_sp)
+
+ggplot(amygdata, aes(x = std_total_nci, y = sqrt(growth_rate), colour = Site))+
+  geom_point()+
+  theme_classic()
+
+## grouped by growth period
+growthnbhdata %>% filter(Period == 2) %>% 
+ggplot(aes(x = std_total_nci, y = sqrt(growth_rate), colour = site_climate))+
+  geom_point(alpha = 0.3)+
+  geom_smooth(method="lm")+
+  theme_classic()+
+  facet_wrap(~Focal_sp)
+
+
+#### Growth rate ~ period MD in high or low neighbourhood crowding ####
+dev.off()
+pdf("Output/panel_growth~period MD+NCI.pdf", width=21, height=21)
+par(mfrow=c(2,2))
+par(mar=c(4,6,2,1))
+par(pty="s")
+for(i in 1:length(specieslist)){
+  plotted.data<-as.data.frame(specieslist[i])
+  plot(jitter(sqrt(growth_rate), amount = 0.05) ~ std_period_md, pch = ifelse(Period==1, 19, 17), col = alpha(ifelse(std_total_nci>0, "forestgreen", "red"), 0.4), ylab="sqrt(Growth rate (mm/day))", xlab="Period MD (standardised)", tck=-0.01, cex= 2, cex.lab = 2, cex.axis = 2, plotted.data)
+  mtext(paste(letters[i], ")", sep=""), side=2,line=1,adj=1.5,las=1, padj=-13, cex=1.5)
+  title(main=bquote(italic(.(speciesnamelist[i]))), cex.main=2.5)
+  model<-lmer(sqrt(growth_rate) ~ std_total_nci + std_md + std_period_md + 
+                std_total_nci*std_period_md + DBH_cm + DBH_cm*std_total_nci +
+                DBH_cm*std_period_md + (1|Site/Plot/Tree), plotted.data)
+  x_to_plot_low<-seq.func(plotted.data$std_period_md[plotted.data$std_total_nci<0])
+  x_to_plot_high<-seq.func(plotted.data$std_period_md[plotted.data$std_total_nci>0])
+  #low NCI - red
+  preddata <- with(model, data.frame(1, -1, 0, x_to_plot_low, mean(plotted.data$DBH_cm), -1*x_to_plot_low, -1*mean(plotted.data$DBH_cm), x_to_plot_low*mean(plotted.data$DBH_cm)))
+  plotted.pred <- glmm.predict(mod = model, newdat = preddata, se.mult = 1.96, logit_link=FALSE, log_link=FALSE, glmmTMB=FALSE)
+  plot.CI.func(x.for.plot = x_to_plot_low, pred = plotted.pred$y, upper = plotted.pred$upper, lower = plotted.pred$lower, env.colour = "grey1", env.trans = 50, line.colour = "red", line.weight = 2, line.type = 1)
+  #high NCI - forest green
+  preddata <- with(model, data.frame(1, 1, 0, x_to_plot_high, mean(plotted.data$DBH_cm), 1*x_to_plot_high, 1*mean(plotted.data$DBH_cm), x_to_plot_high*mean(plotted.data$DBH_cm)))
+  plotted.pred <- glmm.predict(mod = model, newdat = preddata, se.mult = 1.96, logit_link=FALSE, log_link=FALSE, glmmTMB=FALSE)
+  plot.CI.func(x.for.plot = x_to_plot_high, pred = plotted.pred$y, upper = plotted.pred$upper, lower = plotted.pred$lower, env.colour = "grey1", env.trans = 50, line.colour = "forestgreen", line.weight = 2, line.type = 1)
+}
+dev.off()
+
+
+#### All species - plotting interaction between climate and NCI ####
+
+# #### Example I worked through with John
+# #No significant interaction between PPT and NCI
+# # PPT is x
+# # NCI is set at -1, 0 or 1 (1 sd low, mean, or 1 sd high)
+# model1<-lmer(sqrt(growth_rate) ~ std_dbh + Focal_sp + std_ppt + 
+#               std_total_nci + std_dbh*std_total_nci + Focal_sp:std_dbh + std_ppt:std_total_nci +
+#               (1|Site/Plot/Tree), growthnbhdata)
+# 
+# with(growthnbhdata, plot(jitter(sqrt(growth_rate), amount = 0.05) ~ std_ppt, col = ifelse(std_total_nci>0, "red", "blue")))
 # #One sd low NCI
 # curve(cbind(1, 0, 0, 0, 0, x, -1, 0*0, 0*0, 0*0, 0*0, x*-1)%*%fixef(model1), add = TRUE, col = "red")
 # #One sd high NCI
 # curve(cbind(1, 0, 0, 0, 0, x, 1, 0*0, 0*0, 0*0, 0*0, x*1)%*%fixef(model1), add = TRUE, col = "blue")
 # #Mean NCI
-# curve(cbind(1, 0, 0, 0, 0, x, 0, 0*0, 0*0, 0*0, 0*0, x*0)%*%fixef(model1), add = TRUE, col = "blue")
-dev.off()
-pdf("Output/growth_rate~PPT+NCI.pdf", width=21, height=21)
-par(pty="s")
-plot(sqrt(growth_rate) ~ jitter(std_ppt, 1), pch=19, col=alpha("grey60", 0.2), ylab="sqrt(Growth rate (mm/day))", xlab="Mean annual precipitation (standardised)", tck=-0.01, cex= 2, cex.lab = 2, cex.axis = 2, growthnbhdata)
-model<-lmer(sqrt(growth_rate) ~ std_dbh + Focal_sp + std_ppt + 
-              std_nci + std_dbh*std_nci + Focal_sp:std_dbh + std_ppt:std_nci +
-              (1|Site/Plot/Tree), growthnbhdata)
-x_to_plot<-seq.func(growthnbhdata$std_ppt)
-#mean NCI - black
-preddata <- with(model, data.frame(1, 0, 0, 0, 0, x_to_plot, 0, 0*0, 0*0, 0*0, 0*0, x_to_plot*0))
-plotted.pred <- glmm.predict(mod = model, newdat = preddata, se.mult = 1.96, logit_link=FALSE, log_link=FALSE, glmmTMB=FALSE)
-plot.CI.func(x.for.plot = x_to_plot, pred = plotted.pred$y, upper = plotted.pred$upper, lower = plotted.pred$lower, env.colour = "grey1", env.trans = 50, line.colour = "black", line.weight = 2, line.type = 1)
-#low NCI - blue
-preddata <- with(model, data.frame(1, 0, 0, 0, 0, x_to_plot, -1, 0*0, 0*0, 0*0, 0*0, x_to_plot*-1))
-plotted.pred <- glmm.predict(mod = model, newdat = preddata, se.mult = 1.96, logit_link=FALSE, log_link=FALSE, glmmTMB=FALSE)
-plot.CI.func(x.for.plot = x_to_plot, pred = plotted.pred$y, upper = plotted.pred$upper, lower = plotted.pred$lower, env.colour = "grey1", env.trans = 50, line.colour = "blue", line.weight = 2, line.type = 1)
-#high NCI - forest green
-preddata <- with(model, data.frame(1, 0, 0, 0, 0, x_to_plot, 1, 0*0, 0*0, 0*0, 0*0, x_to_plot*1))
-plotted.pred <- glmm.predict(mod = model, newdat = preddata, se.mult = 1.96, logit_link=FALSE, log_link=FALSE, glmmTMB=FALSE)
-plot.CI.func(x.for.plot = x_to_plot, pred = plotted.pred$y, upper = plotted.pred$upper, lower = plotted.pred$lower, env.colour = "grey1", env.trans = 50, line.colour = "forestgreen", line.weight = 2, line.type = 1)
-dev.off()
+# curve(cbind(1, 0, 0, 0, 0, x, 0, 0*0, 0*0, 0*0, 0*0, x*0)%*%fixef(model1), add = TRUE, col = "black")
+# ###
+# 
+# dev.off()
+# pdf("Output/growth_rate~PPT+NCI.pdf", width=21, height=21)
+# par(pty="s")
+# plot(sqrt(growth_rate) ~ jitter(std_ppt, 1), pch=19, col=alpha("grey60", 0.2), ylab="sqrt(Growth rate (mm/day))", xlab="Mean annual precipitation (standardised)", tck=-0.01, cex= 2, cex.lab = 2, cex.axis = 2, growthnbhdata)
+# model<-lmer(sqrt(growth_rate) ~ std_dbh + Focal_sp + std_ppt + 
+#               std_total_nci + std_dbh*std_total_nci + Focal_sp:std_dbh + std_ppt:std_total_nci +
+#               (1|Site/Plot/Tree), growthnbhdata)
+# x_to_plot<-seq.func(growthnbhdata$std_ppt)
+# #mean NCI - black
+# preddata <- with(model, data.frame(1, 0, 0, 0, 0, x_to_plot, 0, 0*0, 0*0, 0*0, 0*0, x_to_plot*0))
+# plotted.pred <- glmm.predict(mod = model, newdat = preddata, se.mult = 1.96, logit_link=FALSE, log_link=FALSE, glmmTMB=FALSE)
+# plot.CI.func(x.for.plot = x_to_plot, pred = plotted.pred$y, upper = plotted.pred$upper, lower = plotted.pred$lower, env.colour = "grey1", env.trans = 50, line.colour = "black", line.weight = 2, line.type = 1)
+# #low NCI - blue
+# preddata <- with(model, data.frame(1, 0, 0, 0, 0, x_to_plot, -1, 0*0, 0*0, 0*0, 0*0, x_to_plot*-1))
+# plotted.pred <- glmm.predict(mod = model, newdat = preddata, se.mult = 1.96, logit_link=FALSE, log_link=FALSE, glmmTMB=FALSE)
+# plot.CI.func(x.for.plot = x_to_plot, pred = plotted.pred$y, upper = plotted.pred$upper, lower = plotted.pred$lower, env.colour = "grey1", env.trans = 50, line.colour = "blue", line.weight = 2, line.type = 1)
+# #high NCI - forest green
+# preddata <- with(model, data.frame(1, 0, 0, 0, 0, x_to_plot, 1, 0*0, 0*0, 0*0, 0*0, x_to_plot*1))
+# plotted.pred <- glmm.predict(mod = model, newdat = preddata, se.mult = 1.96, logit_link=FALSE, log_link=FALSE, glmmTMB=FALSE)
+# plot.CI.func(x.for.plot = x_to_plot, pred = plotted.pred$y, upper = plotted.pred$upper, lower = plotted.pred$lower, env.colour = "grey1", env.trans = 50, line.colour = "forestgreen", line.weight = 2, line.type = 1)
+# dev.off()
+# 
+# ## Repeating the above but for period MD
+# dev.off()
+# pdf("Output/growth_rate~MD+NCI.pdf", width=21, height=21)
+# par(pty="s")
+# plot(sqrt(growth_rate) ~ jitter(std_ppt, 1), pch=19, col=alpha("grey60", 0.2), ylab="sqrt(Growth rate (mm/day))", xlab="Mean annual precipitation (standardised)", tck=-0.01, cex= 2, cex.lab = 2, cex.axis = 2, growthnbhdata)
+# model<-lmer(sqrt(growth_rate) ~ std_dbh + Focal_sp + std_ppt + 
+#               std_total_nci + std_dbh*std_total_nci + Focal_sp:std_dbh + std_ppt:std_total_nci +
+#               (1|Site/Plot/Tree), growthnbhdata)
+# x_to_plot<-seq.func(growthnbhdata$std_ppt)
+# #mean NCI - black
+# preddata <- with(model, data.frame(1, 0, 0, 0, 0, x_to_plot, 0, 0*0, 0*0, 0*0, 0*0, x_to_plot*0))
+# plotted.pred <- glmm.predict(mod = model, newdat = preddata, se.mult = 1.96, logit_link=FALSE, log_link=FALSE, glmmTMB=FALSE)
+# plot.CI.func(x.for.plot = x_to_plot, pred = plotted.pred$y, upper = plotted.pred$upper, lower = plotted.pred$lower, env.colour = "grey1", env.trans = 50, line.colour = "black", line.weight = 2, line.type = 1)
+# #low NCI - blue
+# preddata <- with(model, data.frame(1, 0, 0, 0, 0, x_to_plot, -1, 0*0, 0*0, 0*0, 0*0, x_to_plot*-1))
+# plotted.pred <- glmm.predict(mod = model, newdat = preddata, se.mult = 1.96, logit_link=FALSE, log_link=FALSE, glmmTMB=FALSE)
+# plot.CI.func(x.for.plot = x_to_plot, pred = plotted.pred$y, upper = plotted.pred$upper, lower = plotted.pred$lower, env.colour = "grey1", env.trans = 50, line.colour = "blue", line.weight = 2, line.type = 1)
+# #high NCI - forest green
+# preddata <- with(model, data.frame(1, 0, 0, 0, 0, x_to_plot, 1, 0*0, 0*0, 0*0, 0*0, x_to_plot*1))
+# plotted.pred <- glmm.predict(mod = model, newdat = preddata, se.mult = 1.96, logit_link=FALSE, log_link=FALSE, glmmTMB=FALSE)
+# plot.CI.func(x.for.plot = x_to_plot, pred = plotted.pred$y, upper = plotted.pred$upper, lower = plotted.pred$lower, env.colour = "grey1", env.trans = 50, line.colour = "forestgreen", line.weight = 2, line.type = 1)
+# dev.off()
 
-#### Growth rate ~ NCI in high or low ppt sites ####
-dev.off()
-pdf("Output/growth_rate~NCI+PPT.pdf", width=21, height=21)
-par(pty="s")
-plot(sqrt(growth_rate) ~ std_nci, pch=19, col = alpha(ifelse(std_ppt>0, "forestgreen", "red"), 0.4), ylab="sqrt(Growth rate (mm/day))", xlab="Neighbourhood crowding index (standardised, sqrt)", tck=-0.01, cex= 2, cex.lab = 2, cex.axis = 2, growthnbhdata)
-model<-lmer(sqrt(growth_rate) ~ std_dbh + Focal_sp + std_ppt + 
-              std_nci + std_dbh*std_nci + Focal_sp:std_dbh + std_ppt:std_nci +
-              (1|Site/Plot/Tree), growthnbhdata)
-x_to_plot<-seq.func(growthnbhdata$std_nci)
-#low ppt - red
-preddata <- with(model, data.frame(1, 0, 0, 0, 0, -1, x_to_plot, 0*x_to_plot, 0*0, 0*0, 0*0, -1*x_to_plot))
-plotted.pred <- glmm.predict(mod = model, newdat = preddata, se.mult = 1.96, logit_link=FALSE, log_link=FALSE, glmmTMB=FALSE)
-plot.CI.func(x.for.plot = x_to_plot, pred = plotted.pred$y, upper = plotted.pred$upper, lower = plotted.pred$lower, env.colour = "grey1", env.trans = 50, line.colour = "red", line.weight = 2, line.type = 1)
-#high ppt - forest green
-preddata <- with(model, data.frame(1, 0, 0, 0, 0, 1, x_to_plot, 0*x_to_plot, 0*0, 0*0, 0*0, 1*x_to_plot))
-plotted.pred <- glmm.predict(mod = model, newdat = preddata, se.mult = 1.96, logit_link=FALSE, log_link=FALSE, glmmTMB=FALSE)
-plot.CI.func(x.for.plot = x_to_plot, pred = plotted.pred$y, upper = plotted.pred$upper, lower = plotted.pred$lower, env.colour = "grey1", env.trans = 50, line.colour = "forestgreen", line.weight = 2, line.type = 1)
-dev.off()
-## Do this* want to plot these lines for everything 'dry' vs everything 'wet'
-# so where ppt >0 or <1, or based on how I split them - instead of relative to the mean.
-
-hist(growthnbhdata$std_ppt)
-hist(growthnbhdata$PPT)
-mean(growthnbhdata$PPT)
+### Intra- and inter-specific neighbour effects on growth ####
+ggplot(growthnbhdata)+
+  geom_jitter(aes(x = log_p1_inter_nci, y = growth_rate, colour = "Heterospecific"), alpha = 0.4, width = 0.05)+
+  geom_jitter(aes(x = log_p1_intra_nci, y = growth_rate, colour = "Conspecific"), alpha = 0.4, width = 0.05)+
+  geom_smooth(aes(x = log_p1_inter_nci, y = growth_rate, colour = "Heterospecific"), method = "lm")+
+  geom_smooth(aes(x = log_p1_intra_nci, y = growth_rate, colour = "Conspecific"), method = "lm")+
+  ylab("Growth rate (mm/day)")+
+  xlab("log(neighbourhood crowding+1)")+
+  theme_classic()+
+  scale_colour_manual(values = c("Heterospecific"="forestgreen", "Conspecific"="orchid"), name = NULL)+
+  theme(axis.title.x = element_text(size = 14),
+        axis.title.y = element_text(size = 14),
+        axis.text = element_text(size = 12),
+        strip.text.x = element_text(size = 12, face = "italic"),
+        legend.text = element_text(size = 10),
+        legend.title = element_blank())+
+  facet_wrap(vars(Focal_sp), scales="free")
 
 ##### Do neighbour basal area or density influence growth? ####
 #Basal area
@@ -743,7 +1050,8 @@ site_table %>%
   add_header_above(c(" " = 5, "Number of focal trees" = 4))
 
 
-### BELOW HERE NEEDS TO BE UPDATED ####
+########################
+#### BELOW HERE NEEDS TO BE UPDATED ####
 specieslist <- c("AMYG", "OBLI", "OVAT", "VIMI")
 specieslong <- c("Eucalyptus amygdalina", "Eucalyptus obliqua", "Eucalyptus ovata", "Eucalyptus viminalis")
 for(i in 1:length(specieslist)){
@@ -835,86 +1143,7 @@ ggplot(growthnbhsimple, aes(x = log(No_neighbours), y = growth_rate))+
   ylab("Growth rate (mm/day)")+
   my_theme
 
-#### Looking at intra- and inter-specific neighbour effects on growth ####
-head(growthnbhdata)
-#Need to rename Focal_sp to do matching with Neighbour_sp_ID
-growthnbhdata <- within(growthnbhdata, Focal_sp[Focal_sp == "AMYG"] <- 'Eucalyptus amygdalina')
-growthnbhdata <- within(growthnbhdata, Focal_sp[Focal_sp == "OBLI"] <- 'Eucalyptus obliqua')
-growthnbhdata <- within(growthnbhdata, Focal_sp[Focal_sp == "OVAT"] <- 'Eucalyptus ovata')
-growthnbhdata <- within(growthnbhdata, Focal_sp[Focal_sp == "VIMI"] <- 'Eucalyptus viminalis')
-
-growthnbhdata$Matching <- growthnbhdata$Focal_sp == growthnbhdata$Neighbour_sp_ID
-growthnbhdata$Matching <- ifelse(growthnbhdata$Matching == TRUE, 1, 0)
-
-#Can't sum NAs, so making all Neighbour_DBH_cm NAs 0s.
-growthnbhdata <- growthnbhdata %>% mutate(Neighbour_DBH_cm_2 = ifelse(is.na(Neighbour_DBH_cm_2), 0, Neighbour_DBH_cm_2),
-                                    Neighbour_DBH_cm_3 = ifelse(is.na(Neighbour_DBH_cm_3), 0, Neighbour_DBH_cm_3),
-                                    Neighbour_DBH_cm_4 = ifelse(is.na(Neighbour_DBH_cm_4), 0, Neighbour_DBH_cm_4),
-                                    Neighbour_DBH_cm_5 = ifelse(is.na(Neighbour_DBH_cm_5), 0, Neighbour_DBH_cm_5),
-                                    Neighbour_DBH_cm_6 = ifelse(is.na(Neighbour_DBH_cm_6), 0, Neighbour_DBH_cm_6),
-                                    Neighbour_DBH_cm_7 = ifelse(is.na(Neighbour_DBH_cm_7), 0, Neighbour_DBH_cm_7),
-                                    Neighbour_DBH_cm_8 = ifelse(is.na(Neighbour_DBH_cm_8), 0, Neighbour_DBH_cm_8))
-
-growthnbhmatch <- growthnbhdata %>% group_by(Site, Focal_sp, Plot, Tree) %>%
-  mutate(Intra_abundance = sum(Neighbour_DBH_cm[Matching == "1"] + Neighbour_DBH_cm_2[Matching == "1"] +
-                              Neighbour_DBH_cm_3[Matching == "1"] + Neighbour_DBH_cm_4[Matching == "1"] +
-                                Neighbour_DBH_cm_5[Matching == "1"] + Neighbour_DBH_cm_6[Matching == "1"] +
-                                Neighbour_DBH_cm_7[Matching == "1"] + Neighbour_DBH_cm_8[Matching == "1"]))
-growthnbhmatch <- growthnbhmatch %>% group_by(Site, Focal_sp, Plot, Tree) %>%
-  mutate(Inter_abundance = sum(Neighbour_DBH_cm[Matching == "0"] + Neighbour_DBH_cm_2[Matching == "0"] +
-                                 Neighbour_DBH_cm_3[Matching == "0"] + Neighbour_DBH_cm_4[Matching == "0"] +
-                                 Neighbour_DBH_cm_5[Matching == "0"] + Neighbour_DBH_cm_6[Matching == "0"] +
-                                 Neighbour_DBH_cm_7[Matching == "0"] + Neighbour_DBH_cm_8[Matching == "0"]))
-#Turning into a dataset with one row per subplot
-growthmatchsimple <- growthnbhmatch %>% group_by(Site, Focal_sp, Plot, Tree) %>%
-                                        filter(row_number() == 1)
-growthmatchsimple <- growthmatchsimple %>% select(Site, Focal_sp, Plot, Tree, 
-                                                  Site_name, PPT, PET, MD, growth_rate, 
-                                                  DBH_cm, Total_nbh_DBH, No_neighbours, 
-                                                  log_no_neighbours, Intra_abundance, Inter_abundance)
-
-#Filtering out NAs
-growthmatchsimple <- growthmatchsimple %>% filter(!is.na(Intra_abundance)) %>% filter(!(is.na(Inter_abundance)))
-
-ggplot(growthmatchsimple, aes(x = log(Intra_abundance+1), y = growth_rate))+
-  geom_jitter(alpha = 0.4, width = 0.05)+
-  geom_smooth(method="lm")+
-  ylab("Growth rate (mm/day)")+
-  xlab("Intraspecific neighbour abundance")+
-  theme_classic()+
-  my_theme+
-  theme(strip.text.x = element_text(size = 11, face = "italic"))+
-  facet_wrap(vars(Focal_sp))
-
-ggplot(growthmatchsimple, aes(x = log(Inter_abundance+1), y = growth_rate))+
-  geom_jitter(alpha = 0.4, width = 0.05)+
-  geom_smooth(method="lm")+
-  ylab("Growth rate (mm/day)")+
-  xlab("Interspecific neighbour abundance")+
-  theme_classic()+
-  my_theme+
-  theme(strip.text.x = element_text(size = 11, face = "italic"))+
-  facet_wrap(vars(Focal_sp))
-
-# Plotting them on the same graph
-ggplot(growthmatchsimple)+
-  geom_jitter(aes(x = log(Inter_abundance+1), y = growth_rate, colour = "Interspecific"), alpha = 0.4, width = 0.05)+
-  geom_jitter(aes(x = log(Intra_abundance+1), y = growth_rate, colour = "Intraspecific"), alpha = 0.4, width = 0.05)+
-  geom_smooth(aes(x = log(Inter_abundance+1), y = growth_rate, colour = "Interspecific"), method = "lm")+
-  geom_smooth(aes(x = log(Intra_abundance+1), y = growth_rate, colour = "Intraspecific"), method = "lm")+
-  ylab("Growth rate (mm/day)")+
-  xlab("log(Neighbour abundance+1)")+
-  theme_classic()+
-  scale_colour_manual(values = c("Interspecific"="forestgreen", "Intraspecific"="orchid"), name = NULL)+
-  theme(axis.title.x = element_text(size = 14),
-        axis.title.y = element_text(size = 14),
-        axis.text = element_text(size = 12),
-        strip.text.x = element_text(size = 12, face = "italic"),
-       # legend.text = element_text(size = 10),
-       # legend.title = element_blank(),
-        legend.position = "none")+
-  facet_wrap(vars(Focal_sp))
-
+###################
 ############## Looking at just total neighbour abundance for Holsworth
 #Can't figure it out :(
 
@@ -972,112 +1201,9 @@ for(i in 1:length(specieslong)){
 ovatintra1 <- lm(growth_rate ~ log(Inter_abundance+1), data = filter(growthmatchsimple, Focal_sp == "Eucalyptus ovata"))
 summary(ovatinter1)
 
-
-
-##########Stats! Can't look at differences in water availability yet, not enough sites
-mod1 <- lmer(growth_rate ~ log(Total_nbh_DBH) + Focal_sp + (1|DBH_cm) + (1|Plot), data = growthnbhsimple)
-summary(mod1)
-par(mfrow = c(2,2))
-plot(mod1)
-
-#Or is this the way to do the random effect? Really not sure. Not converging.
-#mod4 <- lmer(log_growth10 ~ Total_nbh_DBH + Focal_sp + (Total_nbh_DBH|Site),
-    #         data=growthnbhdata)
-#summary(mod4)
-#r.squaredGLMM(mod4)
-##########From Piet's Tansley example
-# NOT SURE ABOUT ANY OF THE BELOW!
-#Add in a column of mean-centre temperatures using the scale function. Mean-centring of the
-#environmental variable means that intercepts reflect average values for the population and individuals 
-#So adding in neighbour crowding mean-centred column...
-#Mean-centre the x variable (temperature)
-# From here on, use the mean-centred temperature (ctemperature)
-  
-growthnbhsimple$cnbhdbh <- scale(growthnbhsimple$Total_nbh_DBH)
-head(growthnbhdata)
-
-#Right now the below isn't working with my model including Focal_sp
-nbh_pred <- data.frame(cnbhdbh = seq(from =
-               min(growthnbhsimple$cnbhdbh), to = max(growthnbhsimple$cnbhdbh), 
-               length.out = 50))
-nbh_pred$fit1.1 <- predict(mod1, newdata = nbh_pred, re.form =
-                                     NA)
-ggplot(nbh_pred, aes(x = cnbhdbh, y = fit1.1))+
-  geom_line(data = growthnbhdata, aes(y = log_growth10, colour = Focal_sp))+
-  geom_line(size = 2)+
-    theme_classic()
-
-##################### Modelling and plotting species as a random effect ####
-mod3.1 <- lmer(log_growth10 ~ cnbhdbh + (1|Site/Plot) + (1|Focal_sp),
-             data = growthnbhsimple)
-summary(mod3.1)
-r.squaredGLMM(mod3.1)
-# Predict values based on the model fit using the predict function
-nbh_pred$fit3.1 <- predict(mod3.1, newdata = nbh_pred, re.form =
-                                         NA)
-# Make a prediction for the population-level mean reaction norm
-# and append it to the flowerdata dataset
-growthnbhdata$pred_all3.1 <- predict(mod3.1, re.form = NA)
-# Make predictions for each genotype-level reaction norm
-growthnbhdata$pred_sp3.1 <- predict(mod3.1, re.form = ~(1|Focal_sp))
-# Plot predicted genotype reaction norms over the raw data, along with the overall mean
-ggplot(nbh_pred, aes(x = cnbhdbh, y = fit3.1)) +
-  geom_line(data = growthnbhdata, aes(y = pred_sp3.1, group = Focal_sp, colour =
-                                       Focal_sp), lty = 2) +
-  geom_line(data = growthnbhdata,
-              aes(y = log_growth10, group = Focal_sp, colour = Focal_sp)) +
-  geom_line(size = 2) +
-  theme_classic()
-#This isn't allowing the slopes of the species to vary with nbh DBH though,
-#so it really isn't great!!!
-#So let's try a model that allows the slopes of the random species regressions to 
-# vary across mean-centred nbh dbh
-
-mod3.2 <- lmer(log_growth10 ~ cnbhdbh + (1|Site/Plot) + (1+cnbhdbh|Focal_sp),
-               data = growthnbhdata)
-summary(mod3.2)
-r.squaredGLMM(mod3.2)
-# Predict values based on the model fit using the predict function
-nbh_pred$fit3.2 <- predict(mod3.2, newdata = nbh_pred, re.form =
-                             NA)
-# Make a prediction for the population-level mean reaction norm and append it to the flowerdata dataset
-growthnbhdata$pred_all3.2 <- predict(mod3.2, re.form = NA)
-# Make predictions for each genotype-level reaction norm
-growthnbhdata$pred_sp3.2 <- predict(mod3.2, re.form = ~(1+cnbhdbh|Focal_sp))
-# Plot predicted genotype reaction norms over the raw data, along with the overall mean
-ggplot(nbh_pred, aes(x = cnbhdbh, y = fit3.2)) +
-  geom_line(data = growthnbhdata, aes(y = pred_sp3.2, group = Focal_sp, colour =
-                                        Focal_sp), lty = 2) +
-  geom_line(data = growthnbhdata,
-            aes(y = log_growth10, group = Focal_sp, colour = Focal_sp)) +
-  geom_line(size = 2) +
-  theme_classic()+
-  ylab("log(Growth(mm))") + xlab("Mean-centred neighbour DBH")
-
-#These slopes look great but just realised that they are sitting too high above the data
-#From a quick google, I may need to build a partial residuals plot?
-# To account for the effects of all of the control variables?
-#https://cran.r-project.org/web/packages/jtools/vignettes/effect_plot.html
-
-jtools::effect_plot(mod3.2, pred = cnbhdbh, interval = TRUE, partial.residuals = TRUE)
-
-# Does adding Focal_sp as a random intercept and slope further improve model fit?
-# Likelihood ratio test
-chi2 <- 2*(summary(mod3.2)$logLik - summary(mod3.1)$logLik)
-# The df difference between models can be checked by looking at the df within the
-#models being compared
-summary(mod3.1)$logLik
-summary(mod3.2)$logLik
-#Note that between model1.3 and model1.4 there is a change of 2 df, so the
-# pchisq change needs to be specified with 2 df rather than 1 as in previous comparisons.
-1-pchisq(chi2, 2)
-AIC(mod3, mod3.1, mod3.2)
-#Both AIC and LRT suggest that mod.3.2 is a better fit
-
-############ Visualising more basic trends ####
-
+### Visualising more basic trends ####
 #Plot growth by species by site
-ggplot(dbhnumeric, aes(x = Focal_sp, y = growth_rate, color=Site)) +
+ggplot(growthnbhdata, aes(x = Focal_sp, y = growth_rate, color=Site)) +
   geom_boxplot()+
   #geom_point(position = (position_jitter(width = .2)))+
   theme_bw()+
@@ -1087,23 +1213,16 @@ growthAMYGBOF <- growthalldata %>% filter(Site == "BOF", Focal_sp == 'AMYG')
 
 #Plot growth by site
 #First line of code here reorders Sites according to MD values (so from driest to wettest!)
-dbhnumeric %>% mutate(Site = fct_reorder(Site, MD)) %>%
+growthnbhdata %>% mutate(Site = fct_reorder(Site, MD)) %>%
   ggplot(aes(x = Site, y = growth_rate)) +
   geom_boxplot()+
   geom_jitter(alpha = 0.4, aes(colour = Focal_sp))+
-  theme_bw()
-
-#And separated by species
-dbhnumeric %>% mutate(Site = fct_reorder(Site, MD)) %>%
-  ggplot(aes(x = Site, y = growth_rate)) +
-  geom_boxplot()+
-  geom_jitter(alpha = 0.4)+
   theme_bw()+
-  facet_wrap(~ Focal_sp, ncol = 2, nrow = 2, scales = "free")
+  facet_wrap(~ Focal_sp, scales="free")
 
 #Plotting as above but by MD values instead - remember this is WET to DRY
-  ggplot(aes(x = MD, y = growth_rate), data = dbhnumeric) +
-    geom_jitter(aes(colour = Focal_sp), alpha = 0.4, width = 10)+
+  ggplot(aes(x = MD, y = growth_rate), data = growthnbhdata) +
+    geom_jitter(alpha = 0.3, width = 10)+
     geom_smooth(colour = "grey24", method = "lm")+
     xlab("Moisture deficit (mm)")+
     ylab("Growth rate (mm/day)")+
@@ -1142,63 +1261,8 @@ ovatmd1 <- lm(growth_rate ~ MD, data = filter(dbhnumeric, Focal_sp == "OVAT"))
 summary(ovatmd1)
 r.squaredGLMM(ovatmd1)
 
-## Note wrong datasets from here on
 
-#Filtering out GRA site
-growthGRA <- growthdata2 %>% filter(Site == "GRA")
-ggplot(growthGRA, aes(x = Growth_mm, y = Species)) +
-  geom_boxplot()+
-  geom_jitter(color = 'orange', position = (position_jitter(height = .2)))+
-  theme_bw()
-modelgra1 <- aov(Growth_mm ~ Species, data = growthGRA)
-summary(modelgra1)
-#There are signif. differences between Sites (but don't know which ones yet)
-
-vimiGRA <- growthGRA %>% filter(Species == "E. viminalis") %>% select("Growth_mm")
-amygGRA <- growthGRA %>% filter(Species == "E. amygdalina") %>% select("Growth_mm")
-ovatGRA <- growthGRA %>% filter(Species == "E. ovata") %>% select("Growth_mm")
-obliGRA <- growthGRA %>% filter(Species == "E. obliqua") %>% select("Growth_mm")
-t.test(vimiGRA, amygGRA)
-t.test(vimiGRA, ovatGRA)
-t.test(obliGRA, ovatGRA)
-t.test(vimiGRA, obliGRA)
-t.test(amygGRA, obliGRA)
-# So VIMI and AMYG grew signif. more than OVAT and OBLI, but not diff. from each other, and OBAT and OBLI not diff. from each other
-
-meangrowth <- growthdata %>%
-  group_by(Focal_sp) %>%
-  summarise(mean_growth = mean(Growth_mm, na.rm= TRUE),
-            sd_growth = sd(Growth_mm, na.rm=TRUE))
-
-meangrowthbysite <- growthdata %>%
-  group_by(Site, Focal_sp) %>%
-  summarise(mean_growth = mean(Growth_mm, na.rm= TRUE),
-            sd_growth = sd(Growth_mm, na.rm=TRUE))
-#For Gravelly only
-meangrowthGRA <- growthGRA %>%
-  group_by(Species) %>%
-  summarise(mean_wue = mean(Growth_mm, na.rm= TRUE),
-            sd_wue = sd(Growth_mm, na.rm=TRUE))
-
-#Stats -- all very confused, not sure which models to use
-model1 <- lm(Growth_mm ~ Species, data = growthalldata)
-summary(model1)
-
-#Growth as a function of rainfall?
-model2 <- lm(Growth_mm ~ PPT + Species, data = growthalldata)
-summary(model2)
-
-model3 <- lmer(Growth_mm ~ PPT + Species + (1|DBH_cm), data = growthalldata)
-summary(model3)
-
-model4 <- lm(Growth_mm ~ PPT + Species + (1|DBH_cm) + PPT*Species, data = growthalldata)
-summary(model4)
-
-model6 <- lmer(Growth_mm ~ PPT + (1|Species) + PPT*Species, data = growthalldata)
-summary(model6)
-
-
-#### Growth as a function of rainfall (PPT), PET or MD ####
+### Growth as a function of rainfall (PPT), PET or MD ####
 
 ggplot(growthalldata, aes(x = PPT, y = Growth_mm))+
   geom_jitter(aes(color = Focal_sp))+

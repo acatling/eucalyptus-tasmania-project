@@ -846,6 +846,11 @@ growthnbhdata <- within(growthnbhdata, Focal_sp[Site == 'EPF' & Focal_sp == 'VIM
 #                                                       "OVAT" = "Eucalyptus ovata",
 #                                                       "VIMI" = "Eucalyptus viminalis"))
 
+#### Add categorical information for whether sites are wet or dry
+growthnbhdata$site_climate <- growthnbhdata$Site
+growthnbhdata <- within(growthnbhdata, site_climate[Site == "EPF" | Site == "GRA" | Site == "FREY"] <- 'dry')
+growthnbhdata <- within(growthnbhdata, site_climate[Site == "BOF" | Site == "TMP" | Site == "DOG" | Site == "MER"] <- 'wet')
+
 #Note that this onerowdata isn't quite right - not equal # of growth values for period 1 and 2
 onerowdata <- growthnbhdata %>% filter(Period==2)
 
@@ -854,4 +859,9 @@ amygdata <- growthnbhdata %>% filter(Focal_sp == 'AMYG')
 oblidata <- growthnbhdata %>% filter(Focal_sp == 'OBLI')
 ovatdata <- growthnbhdata %>% filter(Focal_sp == 'OVAT')
 vimidata <- growthnbhdata %>% filter(Focal_sp == 'VIMI')
+#vimi has two NAs for growth which is causing problems for plotting, so removing them
+vimidata <- vimidata %>% filter(!(is.na(DBH_cm)))
 
+specieslist <- list(amygdata, oblidata, ovatdata, vimidata)
+speciesnamelist <- c("Eucalyptus amygdalina", "Eucalyptus obliqua", "Eucalyptus ovata", "Eucalyptus viminalis")
+speciesabbrevlist <- c("AMYG", "OBLI", "OVAT", "VIMI")
