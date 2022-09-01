@@ -8,6 +8,33 @@ source("data_preparations.R")
 library(kableExtra)
 library(sf)
 library(dplyr)
+library(ggfortify)
+
+#### PCA of soil ####
+dev.off()
+pdf("Output/soil-pca.pdf")
+autoplot(soil_pca, label = TRUE, shape = TRUE,
+         loadings = TRUE, loadings.colour = 'slateblue', 
+         loadings.label.repel = TRUE, loadings.label.size = 5,
+         loadings.label = TRUE, loadings.label.colour = 'slateblue')+
+  xlab("PC1 (59.2%)")+
+  ylab("PC2 (16%)")+
+  theme_bw()+
+  theme(axis.title.x = element_text(size = 16),
+        axis.title.y = element_text(size = 16),
+        axis.text = element_text(size = 16))
+dev.off()
+
+### Plotting GPS coordinates of trees
+#Just check Google My Maps!
+# mapfocaldata <- growthdata %>% select(Focal_sp, Site, Plot, Lat, Lon)
+# my_sf <- st_as_sf(mapfocaldata, coords = c('Lon', 'Lat'))
+# my_sf <- st_set_crs(my_sf, crs = 4326)
+test <- my_sf %>% filter(Focal_sp == "VIMI", Site == "TMP")
+view(test)
+  ggplot(test) +
+  geom_sf()+
+  theme_bw()
 
 #### Visualising distributions of data ####
 #square root transformation for growth values, growth rates, 
@@ -498,15 +525,21 @@ dev.off()
 #initial DBH*NCI inter + (1|Site/Plot/Tree)
 
 ### AMYG ####
+
+#initial model:
+# amygmod1 <- lmer(sqrt(growth_rate) ~ std_total_nci + std_md + std_period_md + 
+#                    std_total_nci*std_period_md + DBH_cm + DBH_cm*std_total_nci +
+#                    DBH_cm*std_period_md + (1|Site/Plot/Tree), amygdata)
+#removing DBH interactions from now, solves my vif problem!
+
 amygmod1 <- lmer(sqrt(growth_rate) ~ std_total_nci + std_md + std_period_md + 
-                   std_total_nci*std_period_md + DBH_cm + DBH_cm*std_total_nci +
-                   DBH_cm*std_period_md + (1|Site/Plot/Tree), amygdata)
+                   std_total_nci*std_period_md + std_dbh + (1|Site/Plot/Tree), amygdata)
 amygmod1dharma <- simulateResiduals(amygmod1)
 plot(amygmod1dharma)
 #great
 summary(amygmod1)
 vif(amygmod1)
-#bad vifs for NCI and period MD
+#great
 #plot(amygmod1)
 
 ## Try removing period md (could replace with anomalies)
@@ -514,11 +547,6 @@ vif(amygmod1)
 #                     + DBH_cm + DBH_cm*std_total_nci +
 #                    (1|Site/Plot/Tree), amygdata)
 # vif(amygmod1)
-#Why are DBH_cm and NCI correlated?!
-ggplot(amygdata, aes(x = DBH_cm, y = std_total_nci))+
-  geom_point()+
-  geom_smooth(method='lm')+
-  theme_classic()
 
 ## Try removing long-term md?
 # amygmod1 <- lmer(sqrt(growth_rate) ~ std_total_nci + std_period_md + 
@@ -532,96 +560,82 @@ ggplot(amygdata, aes(x = DBH_cm, y = std_total_nci))+
 #                    + DBH_cm +
 #                    DBH_cm*std_period_md + (1|Site/Plot/Tree), amygdata)
 # vif(amygmod1)
-#Now period md and DBH are correlated? wah
-ggplot(amygdata, aes(x = DBH_cm, y = period_md))+
-  geom_point()+
-  geom_smooth(method='lm')+
-  theme_classic()
-#No it's not!
-## solution: correlation between NCI and long-term climate is fine.
-# correlation between NCI and period climate is definitely fine. Ignoring these two
-# correlations between long-term and period climate are not good - 
-# so will model period climate as anomalies, as John suggested
-# actually I think that is fine too when I don't fit a linear regression to it 
 
 ### intraspecific and interspecific NCIs model, mod2
 amygmod2 <- lmer(sqrt(growth_rate) ~ std_intra_nci + std_inter_nci + std_md + 
                    std_period_md + std_intra_nci*std_period_md + std_inter_nci*std_period_md + 
-                   DBH_cm + DBH_cm*std_intra_nci + DBH_cm*std_inter_nci +
-                   DBH_cm*std_period_md + (1|Site/Plot/Tree), amygdata)
+                   std_dbh + (1|Site/Plot/Tree), amygdata)
 amygmod2dharma <- simulateResiduals(amygmod2)
 plot(amygmod2dharma)
 #great
 summary(amygmod2)
 vif(amygmod1)
-#bad vifs for NCI and period MD
+#great
 
 ### OBLI ####
 oblimod1 <- lmer(sqrt(growth_rate) ~ std_total_nci + std_md + std_period_md + 
-                   std_total_nci*std_period_md + DBH_cm + DBH_cm*std_total_nci +
-                   DBH_cm*std_period_md + (1|Site/Plot/Tree), oblidata)
+                   std_total_nci*std_period_md + std_dbh + (1|Site/Plot/Tree), oblidata)
 oblimod1dharma <- simulateResiduals(oblimod1)
 plot(oblimod1dharma)
 #great
 summary(oblimod1)
 vif(oblimod1)
-#very bad vifs for NCI and period MD
-#plot(oblimod1)
+#great
+
 oblimod2 <- lmer(sqrt(growth_rate) ~ std_intra_nci + std_inter_nci + std_md + 
                    std_period_md + std_intra_nci*std_period_md + std_inter_nci*std_period_md + 
-                   DBH_cm + DBH_cm*std_intra_nci + DBH_cm*std_inter_nci +
-                   DBH_cm*std_period_md + (1|Site/Plot/Tree), oblidata)
+                   std_dbh + (1|Site/Plot/Tree), oblidata)
 oblimod2dharma <- simulateResiduals(oblimod2)
 plot(oblimod2dharma)
 #great
 summary(oblimod2)
 vif(oblimod1)
-#very bad vifs for NCI and period MD
+#great
 
 ### OVAT ####
-#model won't converge using standardised dbh_cm.
-ovatmod1 <- lmer(sqrt(growth_rate) ~ std_total_nci + DBH_cm + std_period_md + 
-                   std_total_nci*std_period_md + DBH_cm + DBH_cm*std_total_nci +
-                   DBH_cm*std_period_md + (1|Site/Plot/Tree), ovatdata)
+## fix this** duplicated std_dbh
+ovatmod1 <- lmer(sqrt(growth_rate) ~ std_total_nci + std_md + std_period_md + 
+                   std_total_nci*std_period_md + std_dbh + (1|Site/Plot/Tree), ovatdata)
 ovatmod1dharma <- simulateResiduals(ovatmod1)
 plot(ovatmod1dharma)
-#residuals not great
+#very bad residuals
 summary(ovatmod1)
 vif(ovatmod1)
-#bad vifs for NCI and period MD
-#plot(ovatmod1)
+#great
+plot(ovatmod1)
+### 
+qqp(ranef(ovatmod1)$`Plot:Site`[,1])
+qqp(ranef(ovatmod1)$`Plot:Site`[,1])
+
 ovatmod2 <- lmer(sqrt(growth_rate) ~ std_intra_nci + std_inter_nci + std_md + 
                    std_period_md + std_intra_nci*std_period_md + std_inter_nci*std_period_md + 
-                   DBH_cm + DBH_cm*std_intra_nci + DBH_cm*std_inter_nci +
-                   DBH_cm*std_period_md + (1|Site/Plot/Tree), ovatdata)
+                   std_dbh + (1|Site/Plot/Tree), ovatdata)
 ovatmod2dharma <- simulateResiduals(ovatmod2)
 plot(ovatmod2dharma)
 #great
 summary(ovatmod2)
 vif(ovatmod1)
-#very bad vifs for NCI and period MD
+#great
 
 ### VIMI ####
 vimimod1 <- lmer(sqrt(growth_rate) ~ std_total_nci + std_md + std_period_md + 
-                   std_total_nci*std_period_md + DBH_cm + DBH_cm*std_total_nci +
-                   DBH_cm*std_period_md + (1|Site/Plot/Tree), vimidata)
+                   std_total_nci*std_period_md + std_dbh + (1|Site/Plot/Tree), vimidata)
 vimimod1dharma <- simulateResiduals(vimimod1)
 plot(vimimod1dharma)
-#okay
+#pretty good
 summary(vimimod1)
 vif(vimimod1)
-#very bad vifs for NCI, bad for period MD
-#plot(vimimod1)
+#great
+
 vimimod2 <- lmer(sqrt(growth_rate) ~ std_intra_nci + std_inter_nci + std_md + 
                    std_period_md + std_intra_nci*std_period_md + std_inter_nci*std_period_md + 
-                   DBH_cm + DBH_cm*std_intra_nci + DBH_cm*std_inter_nci +
-                   DBH_cm*std_period_md + (1|Site/Plot/Tree), vimidata)
+                   std_dbh + (1|Site/Plot/Tree), vimidata)
 vimimod2dharma <- simulateResiduals(vimimod2)
 plot(vimimod2dharma)
-#okay
+#not great
 summary(vimimod2)
 vif(vimimod1)
-#very bad vifs for NCI, bad for period MD
+#great
 
 ### AIC - Is total NCI or intra and inter better model? 
 #AMYG
@@ -705,8 +719,8 @@ plot.CI.func(x.for.plot = x_to_plot_high, pred = plotted.pred$y, upper = plotted
 dev.off()
 
 ### Do this in a loop for all species
-## update this ** this is currently misleading because extrapolating mean values
-# for all x values....
+## with mean is misleading because extrapolating mean values for all x values
+
 dev.off()
 pdf("Output/panel_growth~NCI+period_md_two_levels.pdf", width=21, height=21)
 par(mfrow=c(2,2))
@@ -718,13 +732,12 @@ for(i in 1:length(specieslist)){
   mtext(paste(letters[i], ")", sep=""), side=2,line=1,adj=1.5,las=1, padj=-13, cex=1.5)
   title(main=bquote(italic(.(speciesnamelist[i]))), cex.main=2.5)
   model<-lmer(sqrt(growth_rate) ~ std_total_nci + std_md + std_period_md + 
-                std_total_nci*std_period_md + DBH_cm + DBH_cm*std_total_nci +
-                DBH_cm*std_period_md + (1|Site/Plot/Tree), plotted.data)
+                std_total_nci*std_period_md + std_dbh + (1|Site/Plot/Tree), plotted.data)
   x_to_plot_low<-seq.func(plotted.data$std_total_nci[plotted.data$std_period_md<0])
   #x_to_plot_mean<-seq.func(plotted.data$std_total_nci)
   x_to_plot_high<-seq.func(plotted.data$std_total_nci[plotted.data$std_period_md>0])
   #low md - wet - green
-  preddata <- with(model, data.frame(1, x_to_plot_low, 0, -1, mean(plotted.data$DBH_cm), x_to_plot_low*-1, x_to_plot_low*mean(plotted.data$DBH_cm), -1*mean(plotted.data$DBH_cm)))
+  preddata <- with(model, data.frame(1, x_to_plot_low, 0, -1, 0, x_to_plot_low*-1))
   plotted.pred <- glmm.predict(mod = model, newdat = preddata, se.mult = 1.96, logit_link=FALSE, log_link=FALSE, glmmTMB=FALSE)
   plot.CI.func(x.for.plot = x_to_plot_low, pred = plotted.pred$y, upper = plotted.pred$upper, lower = plotted.pred$lower, env.colour = "grey1", env.trans = 50, line.colour = "forestgreen", line.weight = 2, line.type = 1)
   #mean md - black
@@ -732,7 +745,7 @@ for(i in 1:length(specieslist)){
   # plotted.pred <- glmm.predict(mod = model, newdat = preddata, se.mult = 1.96, logit_link=FALSE, log_link=FALSE, glmmTMB=FALSE)
   # plot.CI.func(x.for.plot = x_to_plot_mean, pred = plotted.pred$y, upper = plotted.pred$upper, lower = plotted.pred$lower, env.colour = "grey1", env.trans = 50, line.colour = "black", line.weight = 2, line.type = 1)
   #high md - dry - red
-  preddata <- with(model, data.frame(1, x_to_plot_high, 0, 1, mean(plotted.data$DBH_cm), x_to_plot_high*1, x_to_plot_high*mean(plotted.data$DBH_cm), 1*mean(plotted.data$DBH_cm)))
+  preddata <- with(model, data.frame(1, x_to_plot_high, 0, 1, 0, x_to_plot_high*1))
   plotted.pred <- glmm.predict(mod = model, newdat = preddata, se.mult = 1.96, logit_link=FALSE, log_link=FALSE, glmmTMB=FALSE)
   plot.CI.func(x.for.plot = x_to_plot_high, pred = plotted.pred$y, upper = plotted.pred$upper, lower = plotted.pred$lower, env.colour = "grey1", env.trans = 50, line.colour = "red", line.weight = 2, line.type = 1)
   }
@@ -919,6 +932,23 @@ ggplot(growthnbhdata)+
         legend.text = element_text(size = 10),
         legend.title = element_blank())+
   facet_wrap(vars(Focal_sp), scales="free")
+
+ggplot(onerowdata, aes(x = log_p1_intra_nci, y = log_p1_inter_nci, colour = Site))+
+  geom_point(alpha = 0.3)+
+  theme_classic()+
+  facet_wrap(~Focal_sp)
+
+#### 31/08/22
+
+#not working because different # of points
+ggplot(growthnbhdata, aes(x = Growth[Period==1], y = Growth[Period==2]))+
+  geom_point(alpha = 0.3)+
+  theme_classic()
+
+
+###
+
+
 
 ##### Do neighbour basal area or density influence growth? ####
 #Basal area

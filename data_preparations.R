@@ -786,7 +786,69 @@ surveysimple <- surveydata %>% group_by(Site, Focal_sp, Plot, Tree) %>%
 
 growthnbhdata <- left_join(growthdata, surveysimple, by = c("Site", "Focal_sp", "Plot", "Tree"))
 
+#### Soil data ####
+soildataraw <- read_csv("Data/soil_data.csv")
+# ggplot(soildata, aes(x = `pH_Level_(CaCl2)`, y = `pH_Level_(H2O)`))+
+#   geom_point(alpha=0.3)+
+#  theme_classic()
+# ggplot(soildata, aes(x = nitrate, y = ammonium))+
+#   geom_point()+
+#   theme_classic()
+#Making nitrate_nitrogen <1 values 0 [so that I can sum them for total N]
+soildata <- within(soildataraw, `Nitrate_Nitrogen_mg/kg`[`Nitrate_Nitrogen_mg/kg` == '<1'] <- "0")
+#Need nitrate_nitrogen to be numeric, not sure why not working unless I remake column
+soildata <- soildata %>% mutate(nitrate = `Nitrate_Nitrogen_mg/kg`,
+                                ammonium = `Ammonium_Nitrogen_mg/kg`)
+soildata$nitrate <- as.numeric(soildata$nitrate)
+soildata <- soildata %>% mutate(total_nitrogen = nitrate + ammonium)
+#Averaging soil pH values, actually will just use CaCl one for now
+#Selecting and renaming columns for PCA
+soildata <- soildata %>% select(Sample_ID, phosphorous = 'Phosphorus_Colwell_mg/kg', potassium = `Potassium_Colwell_mg/kg`, 
+                                sulfur = `Sulfur_mg/kg`, carbon = `Organic_Carbon_%`, conductivity = `Conductivity_dS/m`, 
+                                pH_CaCl2 = `pH_Level_(CaCl2)`, total_nitrogen)
+#Separate sample_ID into Site and Plot
+#Each sample_ID is effectively a plot at the moment
+
+# abioticpcadata <- abioticpcadata %>% unite("plotid", Site:Plot, remove = "false")
+# abioticpcatrim <- abioticpcadata %>% select(-c(Site, Plot))
+
+soildata_pca <- as.data.frame(soildata)
+rownames(soildata_pca) <- soildata_pca$Sample_ID
+soildata_pca <- as.data.frame(soildata_pca[,-1])
+soil_pca <- princomp(soildata_pca, cor = TRUE)
+summary(soil_pca)
+loadings(soil_pca)
+soildata$PC1<-soil_pca$scores[,1]
+soildata$PC2<-soil_pca$scores[,2]
+soildata$PC3<-soil_pca$scores[,3]
+
+## Merge PC1 and PC2 into main dataset
+pc1andpc2 <- soildata %>% select(PC1, PC2)
+soildata <- soildata %>% separate(Sample_ID, c("Site", "Plot"), sep = "([ ?-])")
+#Warning messages from above line are fine
+#Here the VIMI site is TMP-VI which needs to match growthnbhdata in join, rename it in both
+soildata <- within(soildata, Plot[Plot == "VI"] <- "VI-A")
+growthnbhdata <- within(growthnbhdata, Plot[Focal_sp == "VIMI" & Site == "TMP"] <- "VI-A")
+#FREY values should be same for all plots (measured at site-level)
+#MER - sampled as 1, 2 and 3 where, for all species, 1=A, 2=C, 3=B
+soildata <- within(soildata, Plot[Site == "MER" & Plot == "1"] <- "A")
+soildata <- within(soildata, Plot[Site == "MER" & Plot == "2"] <- "C")
+soildata <- within(soildata, Plot[Site == "MER" & Plot == "3"] <- "B")
+#DOG - different plot names per species
+#AMYG: 1=D, 2=C, 3=B. #OBLI: 1=F, 2=E, 3=D. #VIMI: 1=E, 2=D, 3=C.
+#soildata <- within(soildata, Plot[Site == "DOG" & Focal_sp == "AMYG" & Plot == "1"] <- "D")
+## this won't work, hm...* fix
+#GRA - A, B and C lines up with sampling for all species
+#EPF - they do vary, need to check which was sampled
+#BOF - check how it was sampled
+
+#test <- growthnbhdata %>% filter(Site == "MER")
+#Also fix the ones I relabelled to Z and whatnot
+
+#growthnbhdata <- left_join(growthnbhdata, pc1andpc2)
+
 ## Making a simplified dataset with summary data ####
+#ADD PC1 and PC2 here after fixing soil***
 growthnbhdata <- growthnbhdata %>% select(Site, Focal_sp, Plot, Tree, Period, Growth,
                                           DBH_cm, Site_name, PPT, PET, MD, period_rainfall, period_md,
                                           daily_ppt, daily_pet, daily_md, daily_period_rainfall, daily_period_evapo, daily_period_md,
