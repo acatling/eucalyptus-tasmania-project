@@ -95,7 +95,9 @@ growthdata <- growthdata %>% mutate(growth_rate = growth_no_negs/days_in_period)
 # is measured next time I survey! Can back-calculate it from growth
 growthdata$DBH_cm <- as.numeric(growthdata$DBH_cm)
 
-#### Calculate period rainfall ####
+#### Calculate long-term average climate using WorldClim ####
+## See WorldClim datafile**
+#### Calculate period climate ####
 # Using BOM site daily rainfall information
 bom_epf <- read_csv("Data/EPF_all.csv")
 bom_tmp <- read_csv("Data/TMP_all.csv")
@@ -617,6 +619,10 @@ period_climate <- period_climate %>% mutate(period_md = period_evapo - period_ra
 
 ## Merging into growth data
 growthdata <- left_join(growthdata, period_climate)
+
+#### Calculating period anomaly as monthly difference from long-term norm ####
+#Want to sum the ppt and et values from period climate
+# then minus them from long-term norm
 
 #### Standardising period and long-term climate ####
 #Need this to be per day to be able to compare

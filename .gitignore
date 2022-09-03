@@ -2,3 +2,8 @@
 .Rhistory
 .RData
 .Ruserdata
+*.tfw
+*.tif
+*.cpg
+*.cpg
+*.xml
