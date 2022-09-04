@@ -1,13 +1,14 @@
-###### Visualising WorldClim data for Tasmania
+###### Visualising WorldClim data for Tasmanian Euc project
 
-######### Temperature globally ####
-### Version 2.0 
-#Following this guide:https://www.benjaminbell.co.uk/2018/01/extracting-data-and-making-climate-maps.html
+#### Load packages ####
 
 library(raster)
 library(rgdal)
 library(maps)
 library(tidyverse)
+
+######### Temperature globally ####
+#Following this guide:https://www.benjaminbell.co.uk/2018/01/extracting-data-and-making-climate-maps.html
 
 temp1 <- raster("Data/WorldClim/wc2.0_30s_tavg_01.tif")
 temp2 <- raster("Data/WorldClim/wc2.0_30s_tavg_02.tif")
@@ -52,6 +53,9 @@ plot(temp1, xlim=c(-12, 4), ylim=c(48, 64), col=tempcol(100))
 #But colouration is weird, so:
 plot(temp1, xlim=c(-12, 4), ylim=c(48, 64), zlim=c(-10,30), col=tempcol(100))
 
+#Zlim is for temp range
+plot(temp1, xlim=c(144, 150), ylim=c(-44, -40), zlim=c(-10,30), col=tempcol(100))
+
 ###### PPT, PET and MD for Tasmania! #####
 
 #et is evapotranspiration
@@ -77,7 +81,6 @@ ai <- raster("Data/Climate data/ai_et0/ai_et0.tif")
 
 
 ### Code from Leander ###
-
 #Evapotranspiration
 plot(etyr, xlim=c(144, 150), ylim=c(-44, -40))
 #Aridity Index
@@ -101,8 +104,7 @@ Tas_CMD <- Tas_PET-Tas_PPT
 plot(Tas_PPT, xlim=c(147.5, 148.2), ylim=c(-43.3, -42.8))
 
 #All of these from AVH
-## This was for plotting distribution data to identify sites,
-# I do not need to do this
+## This was for plotting distribution data to identify sites
 # amyg <- read_csv("Data/Tassie Eucs/E_amygdalina_Tasi/E_amygdalina_Tasi.csv")
 # obli <- read_csv("Data/Tassie Eucs/E_obliqua_Tasi/E_obliqua_Tasi.csv")
 # ovat <- read_csv("Data/Tassie Eucs/E_ovata_Tasi/E_ovata_Tasi.csv")
@@ -111,14 +113,11 @@ plot(Tas_PPT, xlim=c(147.5, 148.2), ylim=c(-43.3, -42.8))
 # Extracting climate values
 #AusAIreal <- raster("/Users/Alexandra/OneDrive - The University of Queensland/UQ Research/Eucalyptus drought experiment/Files from Leander/AustraliaClimateRasters/Global PET and Aridity Index/AustraliaClimateRasters/Australia_AridityIndex_AIreal.grd")
 
-#Zlim is for temp range
-plot(temp1, xlim=c(144, 150), ylim=c(-44, -40), zlim=c(-10,30), col=tempcol(100))
-
 ############ scratch extraction of random points ################
-#________________________________________________________
 
-rlat <- -41.18608#-41.90641#-41.96799#-42.58982 #-42.56241 #-42.52671#-42.56241#-42.737452
-rlon <-  148.25668#148.15048#148.13864#146.2368#147.46486#147.46399#147.46486#147.44
+###This is how to extract values from a single location
+rlat <- -41.18608
+rlon <-  148.25668
 ptsCMD <- raster::extract(x=Tas_CMD, y= cbind(rlon, rlat))
 ptsAI <- raster::extract(x=Tas_AIreal, y=cbind(rlon, rlat))
 ptsPPT <- raster::extract(x=Tas_PPT, y=cbind(rlon, rlat))
@@ -145,14 +144,5 @@ points(Lat~Long, ResTas, pch=16, cex=AI, col='red')
 
 #### plotting just tasman peninsula
 plot(Tas_CMD, xlim=c(147.5,148.5), ylim=c(-43.5, -42.5))
-
-
-
-
-
-
-
-
-
 
 

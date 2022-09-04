@@ -933,3 +933,4 @@ vimidata <- vimidata %>% filter(!(is.na(DBH_cm)))
 specieslist <- list(amygdata, oblidata, ovatdata, vimidata)
 speciesnamelist <- c("Eucalyptus amygdalina", "Eucalyptus obliqua", "Eucalyptus ovata", "Eucalyptus viminalis")
 speciesabbrevlist <- c("AMYG", "OBLI", "OVAT", "VIMI")
+
