@@ -1058,6 +1058,42 @@ ggplot()+
 dev.off()
 
 #### Table of sample sizes and site climate ####
+
+#simpleResTas has annual long-term PPT, PET and MD
+#climate_diff has period-level long-term MD and period MD, and anomaly
+climatetable <- left_join(climate_diff, simpleResTas)
+#Table with period-level long-term MD and actual/period MD and anomaly
+climatetable <- climatetable %>% dplyr::select(Site, Period, PPT, norm_md, monthly_period_md, anomaly)
+#pivot wider
+periodnormwide <- climatetable %>% pivot_wider(id_cols = Site, names_from = Period, values_from = norm_md)
+colnames(periodnormwide) <- c('Site', 'Norm MD 1', 'Norm MD 2')
+periodactualwide <- climatetable %>% pivot_wider(id_cols = Site, names_from = Period, values_from = monthly_period_md)
+colnames(periodactualwide) <- c('Site', 'Actual MD 1', 'Actual MD 2')
+anomalydata <- climate_diff %>% pivot_wider(id_cols = Site, names_from = Period, values_from = anomaly)
+colnames(anomalydata) <- c('Site', 'Anomaly 1', 'Anomaly 2')
+climatetable2 <- left_join(periodnormwide, periodactualwide)
+site_ppt <- climatetable %>% select(Site, PPT)
+colnames(site_ppt) <- c('Site', 'Norm PPT')
+climatetable2 <- left_join(site_ppt, climatetable2) %>% group_by(Site) %>% filter(row_number() == 1)
+climatetable2 <- left_join(climatetable2, anomalydata)
+#Rearranging rows by site from driest to wettest
+climatetable2 <- climatetable2 %>% arrange(`Norm PPT`)
+#Rearranging columns
+col_order <- c('Site', 'Norm PPT', 'Norm MD', 'Actual MD 1', 'Anomaly 1', 'Norm MD 2', 'Actual MD 2', 'Anomaly 2')
+climatetable2 <- climatetable2[, col_order]
+#Can't figure out how to do names like this, problem with duplicated col names
+#colnames(climatetable2) <- c('Site', 'Norm PPT', 'Norm MD', 'Actual MD', 'Anomaly', 'Norm MD', 'Actual MD', 'Anomaly')
+
+  climatetable2 %>% select(-(`Norm PPT`)) %>%
+  kbl(caption = "<b>Supplementary 1</b>. Long-term average ('norm') moisture deficit (MD, precipitation - evapotranspiration), MD over the growth period ('actual'), and 
+  their difference ('anomaly') at each site by growth period (1 or 2). Long-term values downloaded 
+  from the Global Aridity and PET Database (Zomer et al. 2006) based on 1960-1990 WorldClim climate averages (Hijmans et al. 2005). Actual MD values calculated from 
+  BOM (ref*). MER is Mersey River Conservation Area, DOG is Dogs Head Regional Reserve, TMP is Tasman National Park, BOF is Doctors Peak Regional Reserve, 
+      EPF is Tom Gibson Nature Reserve, FREY is Apslawn Forest Reserve and GRA is Gravelly Ridge Conservation Area.", digits = 0) %>%
+  kable_classic(full_width = F, html_font = "Times") %>%
+  add_header_above(c(" " = 1, "Period 1" = 3, "Period 2" = 3))
+
+## Original table:
 samplesizes <- onerowdata %>% group_by(Site, Focal_sp) %>% 
   summarise(number_focals = n())
 samplesizes_long <- samplesizes %>% pivot_wider(id_cols = Site, names_from = Focal_sp, values_from = number_focals)
@@ -1078,6 +1114,20 @@ site_table %>%
   kable_classic(full_width = F, html_font = "Times") %>%
   row_spec(0, italic = T) %>%
   add_header_above(c(" " = 5, "Number of focal trees" = 4))
+
+####  Table with norm PPT and sample sizes
+site_table2 <- left_join(site_ppt, samplesizes_long) %>% replace(is.na(.), 0) %>% 
+  group_by(Site) %>% filter(row_number() == 1)
+site_table2 <- site_table2 %>% arrange(`Norm PPT`)
+colnames(site_table2) <- c('Site', 'Norm PPT', "E. amygdalina", "E. ovata", "E. viminalis", "E. obliqua")
+
+site_table2 %>%
+  kbl(caption = "<b>Supplementary 1</b>. Number of focal trees and long-term average precipitation (Norm PPT) at each site ordered from driest to wettest based. PPT values downloaded 
+  from the Global Aridity and PET Database (Zomer et al. 2006) based on 1960-1990 WorldClim climate averages (Hijmans et al. 2005). MER is Mersey River Conservation Area, DOG is Dogs Head Regional Reserve, TMP is Tasman National Park, BOF is Doctors Peak Regional Reserve, 
+      EPF is Tom Gibson Nature Reserve, FREY is Apslawn Forest Reserve and GRA is Gravelly Ridge Conservation Area.", digits = 0) %>%
+  kable_classic(full_width = F, html_font = "Times") %>%
+  row_spec(0, italic = T) %>%
+  add_header_above(c(" " = 2, "Number of focal trees" = 4))
 
 
 ########################

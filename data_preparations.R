@@ -34,9 +34,11 @@ initialdbhdata <- initialdbhdataraw %>% select(-CII)
 growthdata <- left_join(growthdataraw, initialdbhdata, by = c("Site", "Focal_sp", "Plot", "Tree"))
 
 ## Importing site characteristics - climate data and site names
-sitechar <- read_csv("Data/tas_site_rainfall.csv")
+#sitechar <- read_csv("Data/tas_site_rainfall.csv")
+#removing this because it has been updated from WorldClim file
 #Merging with growth data
-growthdata <- left_join(growthdata, sitechar)
+#growthdata <- left_join(growthdata, sitechar)
+
 #Note that DBH_cm is not numeric because of two NAs (can be dropped) and two UNs (unknown DBH but have growth data)
 
 #Removing seven trees that I don't have growth data for at all (no GPS coords or removed)
@@ -95,8 +97,6 @@ growthdata <- growthdata %>% mutate(growth_rate = growth_no_negs/days_in_period)
 # is measured next time I survey! Can back-calculate it from growth
 growthdata$DBH_cm <- as.numeric(growthdata$DBH_cm)
 
-#### Calculate long-term average climate using WorldClim ####
-## See WorldClim datafile**
 #### Calculate period climate ####
 # Using BOM site daily rainfall information
 bom_epf <- read_csv("Data/EPF_all.csv")
@@ -620,18 +620,20 @@ period_climate <- period_climate %>% mutate(period_md = period_evapo - period_ra
 ## Merging into growth data
 growthdata <- left_join(growthdata, period_climate)
 
-#### Calculating period anomaly as monthly difference from long-term norm ####
-#Want to sum the ppt and et values from period climate
-# then minus them from long-term norm
-
+#### Calculate long-term average climate using WorldClim and anomaly ####
+source("WorldClim.R")
+select <- dplyr::select
 #### Standardising period and long-term climate ####
 #Need this to be per day to be able to compare
 # at the moment the periods are variable and long-term is based on one year
 
+## Adding in data from WorldClim - long-term annual average PPT, PET and CMD
+growthdata <- left_join(growthdata, simpleResTas)
+
 #long-term climate
 growthdata <- growthdata %>% mutate(daily_ppt = PPT/365,
                         daily_pet = PET/365,
-                        daily_md = MD/365)
+                        daily_md = CMD/365)
 # period climate
 growthdata <- growthdata %>% mutate(daily_period_rainfall = period_rainfall/days_in_period,
                                     daily_period_evapo = period_evapo/days_in_period,
@@ -854,10 +856,14 @@ soildata <- within(soildata, Plot[Site == "MER" & Plot == "3"] <- "B")
 #growthnbhdata <- left_join(growthnbhdata, pc1andpc2)
 
 ## Making a simplified dataset with summary data ####
+## Adding in WorldClim data for period-specific MD, period/monthly-specific BOM and anomaly
+growthnbhdata <- left_join(growthnbhdata, climate_diff, by = c("Site", "Period"))
+
 #ADD PC1 and PC2 here after fixing soil***
 growthnbhdata <- growthnbhdata %>% select(Site, Focal_sp, Plot, Tree, Period, Growth,
-                                          DBH_cm, Site_name, PPT, PET, MD, period_rainfall, period_md,
-                                          daily_ppt, daily_pet, daily_md, daily_period_rainfall, daily_period_evapo, daily_period_md,
+                                          DBH_cm, PPT, CMD, period_rainfall, period_md,
+                                          daily_md, daily_period_md,
+                                          norm_md, monthly_period_md, anomaly,
                                           growth_no_negs, growth_rate,
                                           total_nbh_ba, number_neighbours, total_nci, intra_nci, inter_nci)
 
@@ -882,15 +888,17 @@ growthnbhdata$std_dbh <- scale(growthnbhdata$sqrt_dbh, center = TRUE, scale = TR
 #Scaling long-term climate
 #Not sure I need to scale these - check*
 growthnbhdata$std_ppt <- scale(growthnbhdata$PPT, center = TRUE, scale = TRUE)[,1]
-growthnbhdata$std_md <- scale(growthnbhdata$MD, center = TRUE, scale = TRUE)[,1]
-growthnbhdata$std_daily_ppt <- scale(growthnbhdata$daily_ppt, center = TRUE, scale = TRUE)[,1]
+growthnbhdata$std_md <- scale(growthnbhdata$CMD, center = TRUE, scale = TRUE)[,1]
 growthnbhdata$std_daily_md <- scale(growthnbhdata$daily_md, center = TRUE, scale = TRUE)[,1]
+growthnbhdata$std_norm_md <- scale(growthnbhdata$norm_md, center = TRUE, scale = TRUE)[,1]
+
 #Scaling period rainfall
 growthnbhdata$period_rainfall <- as.numeric(growthnbhdata$period_rainfall)
 growthnbhdata$std_prain <- scale(growthnbhdata$period_rainfall, center = TRUE, scale = TRUE)[,1]
 growthnbhdata$std_period_md <- scale(growthnbhdata$period_md, center = TRUE, scale = TRUE)[,1]
-growthnbhdata$std_daily_prain <- scale(growthnbhdata$daily_period_rainfall, center = TRUE, scale = TRUE)[,1]
 growthnbhdata$std_daily_period_md <- scale(growthnbhdata$daily_period_md, center = TRUE, scale = TRUE)[,1]
+growthnbhdata$std_monthly_period_md <- scale(growthnbhdata$monthly_period_md, center = TRUE, scale = TRUE)[,1]
+growthnbhdata$std_anomaly <- scale(growthnbhdata$anomaly, center = TRUE, scale = TRUE)[,1]
 
 ##Adjusting names of some plots
 #GRA OVAT A 3 and GRA OVAT A 4 - notes say 'this is a VIMI'
