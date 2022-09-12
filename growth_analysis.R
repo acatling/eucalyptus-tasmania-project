@@ -7,23 +7,42 @@ source("data_preparations.R")
 
 library(kableExtra)
 library(sf)
-library(dplyr)
+#library(dplyr)
 library(ggfortify)
 
 #### PCA of soil ####
+summary(soil_pca)
 dev.off()
 pdf("Output/soil-pca.pdf")
 autoplot(soil_pca, label = TRUE, shape = TRUE,
          loadings = TRUE, loadings.colour = 'slateblue', 
          loadings.label.repel = TRUE, loadings.label.size = 5,
          loadings.label = TRUE, loadings.label.colour = 'slateblue')+
-  xlab("PC1 (59.2%)")+
-  ylab("PC2 (16%)")+
+  xlab("PC1 (59.3%)")+
+  ylab("PC2 (15.7%)")+
   theme_bw()+
   theme(axis.title.x = element_text(size = 16),
         axis.title.y = element_text(size = 16),
         axis.text = element_text(size = 16))
 dev.off()
+
+## Plotting growth rate responses to PC1 and PC2
+ggplot(growthnbhdata, aes(x = std_PC1, y = sqrt(growth_rate)))+
+  geom_point(aes(colour = Period),  alpha = 0.5)+
+  geom_smooth(method="lm", aes(colour = Period))+
+  theme_classic()+
+  ylab("sqrt(Growth rate (mm/day))")+
+  xlab("std_PC1")+
+  my_theme+
+  facet_wrap(~Focal_sp)
+ggplot(growthnbhdata, aes(x = std_PC2, y = sqrt(growth_rate)))+
+  geom_point(aes(colour = Period),  alpha = 0.5)+
+  geom_smooth(method="lm", aes(colour = Period))+
+  theme_classic()+
+  ylab("sqrt(Growth rate (mm/day))")+
+  xlab("std_PC1")+
+  my_theme+
+  facet_wrap(~Focal_sp)
 
 ### Plotting GPS coordinates of trees
 #Just check Google My Maps!
@@ -532,11 +551,36 @@ dev.off()
 #                    DBH_cm*std_period_md + (1|Site/Plot/Tree), amygdata)
 #removing DBH interactions from now, solves my vif problem!
 
-amygmod1 <- lmer(sqrt(growth_rate) ~ std_total_nci + std_md + std_period_md + 
-                   std_total_nci*std_period_md + std_dbh + (1|Site/Plot/Tree), amygdata)
+#norm md: long-term 'norm' md calculated for growing months
+#anomaly is period md calculated for growing months - norm_md
+
+### Different possible climate models:
+## 1) Norm + period + norm:NCI 
+#std_norm_md + std_monthly_period_md + std_norm_md:std_total_nci
+
+## 2) norm + anomalies + norm:NCI
+# i. What matters is the normal climate of a site and/or the number/magnitude of anomalous events
+#std_norm_md + std_anomaly + std_norm_md:std_total_nci
+
+## 3) Norm + period + period:NCI
+# i. What matters is the normal climate of a site plus what happens specifically in a given growth period layered on top
+#std_norm_md + std_monthly_period_md + std_monthly_period_md:std_total_nci
+
+## 4) Period + period:NCI
+# Only growth period climate that matters
+# std_monthly_period_md + std_monthly_period_md:NCI
+
+# amygmod1 <- lmer(sqrt(growth_rate) ~ std_total_nci + std_norm_md + std_anomaly + 
+#                    std_norm_md:std_total_nci + std_dbh + std_PC1 +
+#                    (1|Site/Plot/Tree), amygdata)
+#terrible residuals!
+
+amygmod1 <- lmer(sqrt(growth_rate) ~ std_total_nci + std_norm_md + std_anomaly + 
+                                      std_norm_md:std_total_nci + std_dbh + std_PC1 +
+                                      (1|Site/Plot/Tree), amygdata)
 amygmod1dharma <- simulateResiduals(amygmod1)
 plot(amygmod1dharma)
-#great
+#terrible
 summary(amygmod1)
 vif(amygmod1)
 #great
@@ -562,43 +606,45 @@ vif(amygmod1)
 # vif(amygmod1)
 
 ### intraspecific and interspecific NCIs model, mod2
-amygmod2 <- lmer(sqrt(growth_rate) ~ std_intra_nci + std_inter_nci + std_md + 
-                   std_period_md + std_intra_nci*std_period_md + std_inter_nci*std_period_md + 
-                   std_dbh + (1|Site/Plot/Tree), amygdata)
+amygmod2 <- lmer(sqrt(growth_rate) ~ std_intra_nci + std_inter_nci + std_norm_md + 
+                   std_anomaly + std_norm_md:std_intra_nci + std_norm_md:std_inter_nci + 
+                   std_dbh + PC1 + (1|Site/Plot/Tree), amygdata)
 amygmod2dharma <- simulateResiduals(amygmod2)
 plot(amygmod2dharma)
-#great
+#terrible residuals
 summary(amygmod2)
 vif(amygmod1)
 #great
 
 ### OBLI ####
-oblimod1 <- lmer(sqrt(growth_rate) ~ std_total_nci + std_md + std_period_md + 
-                   std_total_nci*std_period_md + std_dbh + (1|Site/Plot/Tree), oblidata)
+oblimod1 <- lmer(sqrt(growth_rate) ~ std_total_nci + std_norm_md + std_anomaly + 
+                   std_norm_md:std_total_nci + std_dbh + std_PC1 +
+                   (1|Site/Plot/Tree), oblidata)
 oblimod1dharma <- simulateResiduals(oblimod1)
 plot(oblimod1dharma)
-#great
+#okay
 summary(oblimod1)
 vif(oblimod1)
 #great
 
-oblimod2 <- lmer(sqrt(growth_rate) ~ std_intra_nci + std_inter_nci + std_md + 
-                   std_period_md + std_intra_nci*std_period_md + std_inter_nci*std_period_md + 
-                   std_dbh + (1|Site/Plot/Tree), oblidata)
+oblimod2 <- lmer(sqrt(growth_rate) ~ std_intra_nci + std_inter_nci + std_norm_md + 
+                   std_anomaly + std_norm_md:std_intra_nci + std_norm_md:std_inter_nci + 
+                   std_dbh + PC1 + (1|Site/Plot/Tree), oblidata)
 oblimod2dharma <- simulateResiduals(oblimod2)
 plot(oblimod2dharma)
-#great
+#okay
 summary(oblimod2)
 vif(oblimod1)
 #great
 
 ### OVAT ####
 ## fix this** duplicated std_dbh
-ovatmod1 <- lmer(sqrt(growth_rate) ~ std_total_nci + std_md + std_period_md + 
-                   std_total_nci*std_period_md + std_dbh + (1|Site/Plot/Tree), ovatdata)
+ovatmod1 <- lmer(sqrt(growth_rate) ~ std_total_nci + std_norm_md + std_anomaly + 
+                   std_norm_md:std_total_nci + std_dbh + std_PC1 +
+                   (1|Site/Plot/Tree), ovatdata)
 ovatmod1dharma <- simulateResiduals(ovatmod1)
 plot(ovatmod1dharma)
-#very bad residuals
+#terrible residuals
 summary(ovatmod1)
 vif(ovatmod1)
 #great
@@ -607,32 +653,33 @@ plot(ovatmod1)
 qqp(ranef(ovatmod1)$`Plot:Site`[,1])
 qqp(ranef(ovatmod1)$`Plot:Site`[,1])
 
-ovatmod2 <- lmer(sqrt(growth_rate) ~ std_intra_nci + std_inter_nci + std_md + 
-                   std_period_md + std_intra_nci*std_period_md + std_inter_nci*std_period_md + 
-                   std_dbh + (1|Site/Plot/Tree), ovatdata)
+ovatmod2 <- lmer(sqrt(growth_rate) ~ std_intra_nci + std_inter_nci + std_norm_md + 
+                   std_anomaly + std_norm_md:std_intra_nci + std_norm_md:std_inter_nci + 
+                   std_dbh + PC1 + (1|Site/Plot/Tree), ovatdata)
 ovatmod2dharma <- simulateResiduals(ovatmod2)
 plot(ovatmod2dharma)
-#great
+#terrible residuals
 summary(ovatmod2)
 vif(ovatmod1)
 #great
 
 ### VIMI ####
-vimimod1 <- lmer(sqrt(growth_rate) ~ std_total_nci + std_md + std_period_md + 
-                   std_total_nci*std_period_md + std_dbh + (1|Site/Plot/Tree), vimidata)
+vimimod1 <- lmer(sqrt(growth_rate) ~ std_total_nci + std_norm_md + std_anomaly + 
+                   std_norm_md:std_total_nci + std_dbh + std_PC1 +
+                   (1|Site/Plot/Tree), vimidata)
 vimimod1dharma <- simulateResiduals(vimimod1)
 plot(vimimod1dharma)
-#pretty good
+#great
 summary(vimimod1)
 vif(vimimod1)
 #great
 
-vimimod2 <- lmer(sqrt(growth_rate) ~ std_intra_nci + std_inter_nci + std_md + 
-                   std_period_md + std_intra_nci*std_period_md + std_inter_nci*std_period_md + 
-                   std_dbh + (1|Site/Plot/Tree), vimidata)
+vimimod2 <- lmer(sqrt(growth_rate) ~ std_intra_nci + std_inter_nci + std_norm_md + 
+                   std_anomaly + std_norm_md:std_intra_nci + std_norm_md:std_inter_nci + 
+                   std_dbh + PC1 + (1|Site/Plot/Tree), vimidata)
 vimimod2dharma <- simulateResiduals(vimimod2)
 plot(vimimod2dharma)
-#not great
+#great
 summary(vimimod2)
 vif(vimimod1)
 #great
@@ -647,6 +694,17 @@ AIC(ovatmod1, ovatmod2)
 #mod 2 significantly better
 AIC(vimimod1, vimimod2)
 #mod 2 significantly better
+
+### R squared of models
+#14-27%
+r.squaredGLMM(amygmod1)
+r.squaredGLMM(amygmod2)
+r.squaredGLMM(oblimod1)
+r.squaredGLMM(oblimod2)
+r.squaredGLMM(ovatmod1)
+r.squaredGLMM(ovatmod2)
+r.squaredGLMM(vimimod1)
+r.squaredGLMM(vimimod2)
 
 #### Plotting growth rate ~ NCI from total NCI model ####
 #all species
@@ -822,6 +880,62 @@ ggplot(aes(x = std_total_nci, y = sqrt(growth_rate), colour = site_climate))+
   theme_classic()+
   facet_wrap(~Focal_sp)
 
+## Growth rate ~ anomaly
+growthnbhdata %>% 
+  ggplot(aes(x = anomaly, y = sqrt(growth_rate), colour = site_climate))+
+  geom_point(alpha = 0.3)+
+  geom_smooth(method="lm")+
+  theme_classic()+
+  facet_wrap(~Focal_sp)
+
+growthnbhdata %>% 
+  ggplot(aes(x = anomaly, y = sqrt(growth_rate)))+
+  geom_point(alpha = 0.3)+
+  geom_smooth(method='lm')+
+  theme_classic()+
+  facet_wrap(~Focal_sp)
+
+## Anomaly ~ norm MD
+growthnbhdata %>% 
+  ggplot(aes(x = norm_md, y = anomaly, colour = site_climate))+
+  geom_point(alpha = 0.3)+
+  theme_classic()+
+  facet_wrap(~Focal_sp)
+
+### Growth rate ~ NCI given high or low norm_md UPDATED ####
+growthnbhdata %>% 
+  ggplot(aes(x = std_total_nci, y = sqrt(growth_rate), colour = site_climate))+
+  geom_point(alpha = 0.3)+
+  geom_smooth(method="lm")+
+  theme_classic()+
+  facet_wrap(~Focal_sp)
+
+###
+dev.off()
+pdf("Output/panel_growth~NCI+norm_md.pdf", width=21, height=21)
+par(mfrow=c(2,2))
+par(mar=c(4,6,2,1))
+par(pty="s")
+for(i in 1:length(specieslist)){
+  plotted.data<-as.data.frame(specieslist[i])
+  plot(sqrt(growth_rate) ~ std_total_nci, pch = ifelse(Period==1, 19, 17), col = alpha(ifelse(std_norm_md>0, "red", "forestgreen"), 0.4), ylab="sqrt(Growth rate (mm/day))", xlab="Neighbourhood crowding index (standardised, sqrt)", tck=-0.01, cex= 2, cex.lab = 2, cex.axis = 2, plotted.data)
+  mtext(paste(letters[i], ")", sep=""), side=2,line=1,adj=1.5,las=1, padj=-13, cex=1.5)
+  title(main=bquote(italic(.(speciesnamelist[i]))), cex.main=2.5)
+  model<-lmer(sqrt(growth_rate) ~ std_total_nci + std_norm_md + std_anomaly + 
+                std_norm_md:std_total_nci + std_dbh + std_PC1 + (1|Site/Plot/Tree), plotted.data)
+  x_to_plot_low<-seq.func(plotted.data$std_total_nci[plotted.data$std_norm_md<0])
+  x_to_plot_high<-seq.func(plotted.data$std_total_nci[plotted.data$std_norm_md>0])
+  #low md - wet - green
+  preddata <- with(model, data.frame(1, x_to_plot_low, -1, 0, 0, 0, -1*x_to_plot_low))
+  plotted.pred <- glmm.predict(mod = model, newdat = preddata, se.mult = 1.96, logit_link=FALSE, log_link=FALSE, glmmTMB=FALSE)
+  plot.CI.func(x.for.plot = x_to_plot_low, pred = plotted.pred$y, upper = plotted.pred$upper, lower = plotted.pred$lower, env.colour = "grey1", env.trans = 50, line.colour = "forestgreen", line.weight = 2, line.type = 1)
+  #high md - dry - red
+  preddata <- with(model, data.frame(1, x_to_plot_high, 1, 0, 0, 0, 1*x_to_plot_high))
+  plotted.pred <- glmm.predict(mod = model, newdat = preddata, se.mult = 1.96, logit_link=FALSE, log_link=FALSE, glmmTMB=FALSE)
+  plot.CI.func(x.for.plot = x_to_plot_high, pred = plotted.pred$y, upper = plotted.pred$upper, lower = plotted.pred$lower, env.colour = "grey1", env.trans = 50, line.colour = "red", line.weight = 2, line.type = 1)
+}
+dev.off()
+
 
 #### Growth rate ~ period MD in high or low neighbourhood crowding ####
 dev.off()
@@ -917,11 +1031,11 @@ dev.off()
 
 ### Intra- and inter-specific neighbour effects on growth ####
 ggplot(growthnbhdata)+
-  geom_jitter(aes(x = log_p1_inter_nci, y = growth_rate, colour = "Heterospecific"), alpha = 0.4, width = 0.05)+
-  geom_jitter(aes(x = log_p1_intra_nci, y = growth_rate, colour = "Conspecific"), alpha = 0.4, width = 0.05)+
-  geom_smooth(aes(x = log_p1_inter_nci, y = growth_rate, colour = "Heterospecific"), method = "lm")+
-  geom_smooth(aes(x = log_p1_intra_nci, y = growth_rate, colour = "Conspecific"), method = "lm")+
-  ylab("Growth rate (mm/day)")+
+  geom_jitter(aes(x = log_p1_inter_nci, y = sqrt(growth_rate), colour = "Heterospecific"), alpha = 0.4, width = 0.05)+
+  geom_jitter(aes(x = log_p1_intra_nci, y = sqrt(growth_rate), colour = "Conspecific"), alpha = 0.4, width = 0.05)+
+  geom_smooth(aes(x = log_p1_inter_nci, y = sqrt(growth_rate), colour = "Heterospecific"), method = "lm")+
+  geom_smooth(aes(x = log_p1_intra_nci, y = sqrt(growth_rate), colour = "Conspecific"), method = "lm")+
+  ylab("sqrt(Growth rate (mm/day))")+
   xlab("log(neighbourhood crowding+1)")+
   theme_classic()+
   scale_colour_manual(values = c("Heterospecific"="forestgreen", "Conspecific"="orchid"), name = NULL)+
@@ -931,7 +1045,7 @@ ggplot(growthnbhdata)+
         strip.text.x = element_text(size = 12, face = "italic"),
         legend.text = element_text(size = 10),
         legend.title = element_blank())+
-  facet_wrap(vars(Focal_sp), scales="free")
+  facet_wrap(vars(Focal_sp), scales="fixed")
 
 ggplot(onerowdata, aes(x = log_p1_intra_nci, y = log_p1_inter_nci, colour = Site))+
   geom_point(alpha = 0.3)+

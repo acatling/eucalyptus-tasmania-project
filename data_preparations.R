@@ -25,13 +25,18 @@ my_theme <- theme(axis.title.x = element_text(size = 16),
 #### Importing and tidying data ####
 ## Importing growth data
 growthdataraw <-read_csv("Data/growth_data.csv")
-
 ## Importing initial DBH data
 initialdbhdataraw <- read_csv("Data/initial_field_dbh_data.csv")
 # Removing CII column - crown index that I never measured
 initialdbhdata <- initialdbhdataraw %>% select(-CII)
 #Merging DBH data with growth data
 growthdata <- left_join(growthdataraw, initialdbhdata, by = c("Site", "Focal_sp", "Plot", "Tree"))
+
+### MER VIMI B4 and MER VIMI B5 incorrectly recorded as DOG B4 and B5
+#Adjusting these. There are no DOG VIMI Bs!
+# This the case for both initial dbh and growth measurements - trees may be mislabelled
+growthdata <- within(growthdata, Site[Site == 'DOG' & Focal_sp == 'VIMI' & Plot == 'B' & Tree == '4'] <- 'MER')
+growthdata <- within(growthdata, Site[Site == 'DOG' & Focal_sp == 'VIMI' & Plot == 'B' & Tree == '5'] <- 'MER')
 
 ## Importing site characteristics - climate data and site names
 #sitechar <- read_csv("Data/tas_site_rainfall.csv")
@@ -41,13 +46,16 @@ growthdata <- left_join(growthdataraw, initialdbhdata, by = c("Site", "Focal_sp"
 
 #Note that DBH_cm is not numeric because of two NAs (can be dropped) and two UNs (unknown DBH but have growth data)
 
-#Removing seven trees that I don't have growth data for at all (no GPS coords or removed)
+#Removing trees that I don't have growth data for at all (no GPS coords or removed) (7)
+#and trees that were incorrectly IDd (6) total 13 trees
+#Check later: DOG AM B5 tree fell on it ** do this
 trees_to_remove <- read_csv("Data/trees_to_remove.csv")
 growthdata <- anti_join(growthdata, trees_to_remove, by = c("Site", "Focal_sp", "Plot", "Tree"))
 
 ## Want to calculate growth as a rate, as different number of days between notching and growth measurements
 #this dates_growth_and_bom_sites file also has info on nearest BOM site
 datesdataraw <- read_csv("Data/dates_growth_and_bom_sites.csv")
+
 #Making period a factor
 growthdata$Period <- as.factor(growthdata$Period)
 datesdataraw$Period <- as.factor(datesdataraw$Period)
@@ -138,7 +146,6 @@ tmp_rainfall_period1 <- bom_tmp %>% subset(date >= "2020-01-29" & date <= "2021-
   summarise(period1_rainfall = sum(`Rainfall amount (millimetres)`))
 tmp_rainfall_period2 <- bom_tmp %>% subset(date >= "2021-02-16" & date <= "2022-02-13") %>%
   summarise(period2_rainfall = sum(`Rainfall amount (millimetres)`, na.rm=TRUE))
-test <- bom_tmp %>% subset(date >= "2021-02-16" & date <= "2022-02-13")
 period_rainfall_data <- within(period_rainfall_data, period_rainfall[Period == '1' & Site == 'TMP'] <- tmp_rainfall_period1)
 period_rainfall_data <- within(period_rainfall_data, period_rainfall[Period == '2' & Site == 'TMP'] <- tmp_rainfall_period2)
 
@@ -654,14 +661,8 @@ surveydata <- rawsurveydata %>% filter(!is.na(Neighbour_DBH_cm))
 #Completed surveys for 310 plots
 #test2 <- surveydata %>% group_by(Site, Focal_sp, Plot, Tree) %>% filter(row_number() == 1)
 
-#GRA VIMI B3 - Notes 'Focal definitely a GLOB'. Removing this and this:
-#TMP OBLI B5 - Melaleuca
-#There were other melaleucas and other focal species that were incorrectly IDd that I did not survey
-#These will be dropped when I merge growth and survey data? Shouldn't be in models, but check them * to do *
-growthdata <- growthdata %>% filter(!((Site == "GRA" & Focal_sp == "VIMI" & Plot == "B" & Tree == "3")))
-surveydata <- surveydata %>% filter(!((Site == "GRA" & Focal_sp == "VIMI" & Plot == "B" & Tree == "3")))
-growthdata <- growthdata %>% filter(!((Site == "TMP" & Focal_sp == "OBLI" & Plot == "B" & Tree == "5")))
-surveydata <- surveydata %>% filter(!((Site == "TMP" & Focal_sp == "OBLI" & Plot == "B" & Tree == "5")))
+## Removing these (no growth data or incorrectly IDd)
+surveydata <- anti_join(surveydata, trees_to_remove, by = c("Site", "Focal_sp", "Plot", "Tree"))
 
 #Replacing NAs with 0s (to merge neighbour DBHs later)
 #test <- surveydata %>% replace(is.na(.), 0) #not working :(
@@ -790,9 +791,28 @@ surveysimple <- surveydata %>% group_by(Site, Focal_sp, Plot, Tree) %>%
 #TMP OBLI B4, DOGOBLIB2, DOGVIMIB5, DOGVIMIC4,
 #GRAOBLIB6, GRAOVATA1, GRAVIMIA7, GRAVIMIB4, BOFVIMIB4
 #test <- anti_join(growthdata, surveysimple)
-### Do this - gra amyg c1 / resurveyed plots, adjust them
+### Do this - gra amyg c1 / resurveyed plots, adjust them **
 
 growthnbhdata <- left_join(growthdata, surveysimple, by = c("Site", "Focal_sp", "Plot", "Tree"))
+
+### Adjusting names of some plots
+#GRA OVAT A3 and GRA OVAT A4 - notes say 'this is a VIMI'
+#these are in the VIMI A area. Renaming OVAT A3 = VIMI A10 and OVAT A4 = VIMI A11
+#Changing these to VIMI and plot Z in growth notes
+growthnbhdata <- within(growthnbhdata, Tree[Site == 'GRA' & Focal_sp == 'OVAT' & Plot == 'A' & Tree == '3'] <- '10')
+growthnbhdata <- within(growthnbhdata, Focal_sp[Site == 'GRA' & Focal_sp == 'OVAT' & Plot == 'A' & Tree == '10'] <- 'VIMI')
+growthnbhdata <- within(growthnbhdata, Tree[Site == 'GRA' & Focal_sp == 'OVAT' & Plot == 'A' & Tree == '4'] <- '11')
+growthnbhdata <- within(growthnbhdata, Focal_sp[Site == 'GRA' & Focal_sp == 'OVAT' & Plot == 'A' & Tree == '11'] <- 'VIMI')
+
+## Removing dodgy values where the band came off etc. See notes, many things to adjust. do this!*
+
+#EPF VIMI B1 is an ovata: this is the OVAT B area - let's call it OVAT B 10 (previously had it as OVAT Z1)
+growthnbhdata <- within(growthnbhdata, Tree[Site == 'EPF' & Focal_sp == 'VIMI' & Plot == 'B' & Tree == '1'] <- '10')
+growthnbhdata <- within(growthnbhdata, Focal_sp[Site == 'EPF' & Focal_sp == 'VIMI' & Plot == 'B' & Tree == '10'] <- 'OVAT')
+
+## BOF OVAT Z1 was called Z after E1 was duplicated - renaming it to E10 instead.
+growthnbhdata <- within(growthnbhdata, Tree[Site == 'BOF' & Focal_sp == 'OVAT' & Plot == 'Z' & Tree == '1'] <- '10')
+growthnbhdata <- within(growthnbhdata, Plot[Site == 'BOF' & Focal_sp == 'OVAT' & Plot == 'Z' & Tree == '10'] <- 'E')
 
 #### Soil data ####
 soildataraw <- read_csv("Data/soil_data.csv")
@@ -834,38 +854,92 @@ soildata$PC3<-soil_pca$scores[,3]
 pc1andpc2 <- soildata %>% select(PC1, PC2)
 soildata <- soildata %>% separate(Sample_ID, c("Site", "Plot"), sep = "([ ?-])")
 #Warning messages from above line are fine
+
+## Make soil ID and match soil values to that soil ID
+soildata <- soildata %>% unite("soil_id", Site:Plot, remove = "false")
+growthnbhdata$soil_id <- 'ABC'
+
 #Here the VIMI site is TMP-VI which needs to match growthnbhdata in join, rename it in both
+###TMP
+#obli A, B and C. Vimi alone VI-A.
 soildata <- within(soildata, Plot[Plot == "VI"] <- "VI-A")
 growthnbhdata <- within(growthnbhdata, Plot[Focal_sp == "VIMI" & Site == "TMP"] <- "VI-A")
-#FREY values should be same for all plots (measured at site-level)
-#MER - sampled as 1, 2 and 3 where, for all species, 1=A, 2=C, 3=B
-soildata <- within(soildata, Plot[Site == "MER" & Plot == "1"] <- "A")
-soildata <- within(soildata, Plot[Site == "MER" & Plot == "2"] <- "C")
-soildata <- within(soildata, Plot[Site == "MER" & Plot == "3"] <- "B")
-#DOG - different plot names per species
+growthnbhdata <- within(growthnbhdata, soil_id[Site=="TMP" & Focal_sp == "VIMI"] <- "TMP_VI-A")
+growthnbhdata <- within(growthnbhdata, soil_id[Site=="TMP" & Focal_sp == "OBLI" & Plot == "A"] <- "TMP_A")
+growthnbhdata <- within(growthnbhdata, soil_id[Site=="TMP" & Focal_sp == "OBLI" & Plot == "B"] <- "TMP_B")
+growthnbhdata <- within(growthnbhdata, soil_id[Site=="TMP" & Focal_sp == "OBLI" & Plot == "C"] <- "TMP_C")
+
+###FREY values should be same for all plots (measured at site-level)
+growthnbhdata <- within(growthnbhdata, soil_id[Site=="FREY"] <- "FREY_NA")
+
+###MER - for all species, 1=A, 2=C, 3=B
+growthnbhdata <- within(growthnbhdata, soil_id[Site=="MER" & Plot == "A"] <- "MER_1")
+growthnbhdata <- within(growthnbhdata, soil_id[Site=="MER" & Plot == "B"] <- "MER_2")
+growthnbhdata <- within(growthnbhdata, soil_id[Site=="MER" & Plot == "C"] <- "MER_3")
+
+###DOG - different plot names per species
 #AMYG: 1=D, 2=C, 3=B. #OBLI: 1=F, 2=E, 3=D. #VIMI: 1=E, 2=D, 3=C.
-#soildata <- within(soildata, Plot[Site == "DOG" & Focal_sp == "AMYG" & Plot == "1"] <- "D")
-## this won't work, hm...* fix
-#GRA - A, B and C lines up with sampling for all species
-#EPF - they do vary, need to check which was sampled
-#BOF - check how it was sampled
+growthnbhdata <- within(growthnbhdata, soil_id[Site=="DOG" & Focal_sp == "AMYG" & Plot == "B"] <- "DOG_3")
+growthnbhdata <- within(growthnbhdata, soil_id[Site=="DOG" & Focal_sp == "AMYG" & Plot == "C"] <- "DOG_2")
+growthnbhdata <- within(growthnbhdata, soil_id[Site=="DOG" & Focal_sp == "AMYG" & Plot == "D"] <- "DOG_1")
+growthnbhdata <- within(growthnbhdata, soil_id[Site=="DOG" & Focal_sp == "OBLI" & Plot == "D"] <- "DOG_3")
+growthnbhdata <- within(growthnbhdata, soil_id[Site=="DOG" & Focal_sp == "OBLI" & Plot == "E"] <- "DOG_2")
+growthnbhdata <- within(growthnbhdata, soil_id[Site=="DOG" & Focal_sp == "OBLI" & Plot == "F"] <- "DOG_1")
+growthnbhdata <- within(growthnbhdata, soil_id[Site=="DOG" & Focal_sp == "VIMI" & Plot == "C"] <- "DOG_3")
+growthnbhdata <- within(growthnbhdata, soil_id[Site=="DOG" & Focal_sp == "VIMI" & Plot == "D"] <- "DOG_2")
+growthnbhdata <- within(growthnbhdata, soil_id[Site=="DOG" & Focal_sp == "VIMI" & Plot == "E"] <- "DOG_1")
 
-#test <- growthnbhdata %>% filter(Site == "MER")
-#Also fix the ones I relabelled to Z and whatnot
+###GRA - A, B and C lines up with sampling for all species
+growthnbhdata <- within(growthnbhdata, soil_id[Site=="GRA" & Plot == "A"] <- "GRA_A")
+growthnbhdata <- within(growthnbhdata, soil_id[Site=="GRA" & Plot == "B"] <- "GRA_B")
+growthnbhdata <- within(growthnbhdata, soil_id[Site=="GRA" & Plot == "C"] <- "GRA_C")
 
-#growthnbhdata <- left_join(growthnbhdata, pc1andpc2)
+###EPF - varies by species
+#AMYG: 1=C, 2=B, 3=A  #OVAT: 4=A, 2=B, 3=C. #VIMI: 4=D, 1=C, 2=B, 3=A
+growthnbhdata <- within(growthnbhdata, soil_id[Site=="EPF" & Focal_sp == "AMYG" & Plot == "C"] <- "EPF_1")
+growthnbhdata <- within(growthnbhdata, soil_id[Site=="EPF" & Focal_sp == "AMYG" & Plot == "B"] <- "EPF_2")
+growthnbhdata <- within(growthnbhdata, soil_id[Site=="EPF" & Focal_sp == "AMYG" & Plot == "A"] <- "EPF_3")
+growthnbhdata <- within(growthnbhdata, soil_id[Site=="EPF" & Focal_sp == "OVAT" & Plot == "A"] <- "EPF_4")
+growthnbhdata <- within(growthnbhdata, soil_id[Site=="EPF" & Focal_sp == "OVAT" & Plot == "B"] <- "EPF_2")
+growthnbhdata <- within(growthnbhdata, soil_id[Site=="EPF" & Focal_sp == "OVAT" & Plot == "C"] <- "EPF_3")
+growthnbhdata <- within(growthnbhdata, soil_id[Site=="EPF" & Focal_sp == "VIMI" & Plot == "A"] <- "EPF_3")
+growthnbhdata <- within(growthnbhdata, soil_id[Site=="EPF" & Focal_sp == "VIMI" & Plot == "B"] <- "EPF_2")
+growthnbhdata <- within(growthnbhdata, soil_id[Site=="EPF" & Focal_sp == "VIMI" & Plot == "C"] <- "EPF_1")
+growthnbhdata <- within(growthnbhdata, soil_id[Site=="EPF" & Focal_sp == "VIMI" & Plot == "D"] <- "EPF_4")
+
+###BOF - varies by species
+#AMYG: 1=B, 2=C and A, OVAT: 1=C, 2=D and B, 3=E, 4=A. 
+#VIMI: 1=B, 2=C and A, 3=D-F: VIE1, VIF2, VIF3, VID1, VID2.
+growthnbhdata <- within(growthnbhdata, soil_id[Site=="BOF" & Focal_sp == "AMYG" & Plot == "A"] <- "BOF_B2")
+growthnbhdata <- within(growthnbhdata, soil_id[Site=="BOF" & Focal_sp == "AMYG" & Plot == "B"] <- "BOF_B1")
+growthnbhdata <- within(growthnbhdata, soil_id[Site=="BOF" & Focal_sp == "AMYG" & Plot == "C"] <- "BOF_B2")
+growthnbhdata <- within(growthnbhdata, soil_id[Site=="BOF" & Focal_sp == "OVAT" & Plot == "A"] <- "BOF_B4")
+growthnbhdata <- within(growthnbhdata, soil_id[Site=="BOF" & Focal_sp == "OVAT" & Plot == "B"] <- "BOF_B2")
+growthnbhdata <- within(growthnbhdata, soil_id[Site=="BOF" & Focal_sp == "OVAT" & Plot == "C"] <- "BOF_B1")
+growthnbhdata <- within(growthnbhdata, soil_id[Site=="BOF" & Focal_sp == "OVAT" & Plot == "D"] <- "BOF_B2")
+growthnbhdata <- within(growthnbhdata, soil_id[Site=="BOF" & Focal_sp == "OVAT" & Plot == "E"] <- "BOF_B3")
+growthnbhdata <- within(growthnbhdata, soil_id[Site=="BOF" & Focal_sp == "VIMI" & Plot == "A"] <- "BOF_B2")
+growthnbhdata <- within(growthnbhdata, soil_id[Site=="BOF" & Focal_sp == "VIMI" & Plot == "B"] <- "BOF_B1")
+growthnbhdata <- within(growthnbhdata, soil_id[Site=="BOF" & Focal_sp == "VIMI" & Plot == "C"] <- "BOF_B2")
+growthnbhdata <- within(growthnbhdata, soil_id[Site=="BOF" & Focal_sp == "VIMI" & Plot == "D"] <- "BOF_B3")
+growthnbhdata <- within(growthnbhdata, soil_id[Site=="BOF" & Focal_sp == "VIMI" & Plot == "E"] <- "BOF_B3")
+growthnbhdata <- within(growthnbhdata, soil_id[Site=="BOF" & Focal_sp == "VIMI" & Plot == "F"] <- "BOF_B3")
+
+### Simplifying soil dataset to merge with growthnbhdata
+soil_simple <- soildata %>% select(soil_id, PC1, PC2)
+growthnbhdata <- left_join(growthnbhdata, soil_simple)
 
 ## Making a simplified dataset with summary data ####
 ## Adding in WorldClim data for period-specific MD, period/monthly-specific BOM and anomaly
 growthnbhdata <- left_join(growthnbhdata, climate_diff, by = c("Site", "Period"))
 
-#ADD PC1 and PC2 here after fixing soil***
 growthnbhdata <- growthnbhdata %>% select(Site, Focal_sp, Plot, Tree, Period, Growth,
                                           DBH_cm, PPT, CMD, period_rainfall, period_md,
                                           daily_md, daily_period_md,
                                           norm_md, monthly_period_md, anomaly,
                                           growth_no_negs, growth_rate,
-                                          total_nbh_ba, number_neighbours, total_nci, intra_nci, inter_nci)
+                                          total_nbh_ba, number_neighbours, total_nci, intra_nci, inter_nci,
+                                          PC1, PC2)
 
 ## Standardising NCIs to a mean of 0 and SD of 1, first creating logged version
 #Intra and inter have zero values so adding 1 before logging
@@ -882,11 +956,12 @@ growthnbhdata <- growthnbhdata %>% mutate(log_p1_inter_nci = log(inter_nci+1))
 growthnbhdata$std_total_nci <- scale(growthnbhdata$log_total_nci, center = TRUE, scale = TRUE)[,1]
 growthnbhdata$std_intra_nci <- scale(growthnbhdata$log_p1_intra_nci, center = TRUE, scale = TRUE)[,1]
 growthnbhdata$std_inter_nci <- scale(growthnbhdata$log_p1_inter_nci, center = TRUE, scale = TRUE)[,1]
-#Scaling initial DBH too
+
+#Scaling initial DBH
 growthnbhdata <- growthnbhdata %>% mutate(sqrt_dbh = sqrt(DBH_cm))
 growthnbhdata$std_dbh <- scale(growthnbhdata$sqrt_dbh, center = TRUE, scale = TRUE)[,1]
+
 #Scaling long-term climate
-#Not sure I need to scale these - check*
 growthnbhdata$std_ppt <- scale(growthnbhdata$PPT, center = TRUE, scale = TRUE)[,1]
 growthnbhdata$std_md <- scale(growthnbhdata$CMD, center = TRUE, scale = TRUE)[,1]
 growthnbhdata$std_daily_md <- scale(growthnbhdata$daily_md, center = TRUE, scale = TRUE)[,1]
@@ -900,27 +975,9 @@ growthnbhdata$std_daily_period_md <- scale(growthnbhdata$daily_period_md, center
 growthnbhdata$std_monthly_period_md <- scale(growthnbhdata$monthly_period_md, center = TRUE, scale = TRUE)[,1]
 growthnbhdata$std_anomaly <- scale(growthnbhdata$anomaly, center = TRUE, scale = TRUE)[,1]
 
-##Adjusting names of some plots
-#GRA OVAT A 3 and GRA OVAT A 4 - notes say 'this is a VIMI'
-#Changing these to VIMI and plot Z in growth notes
-growthnbhdata <- within(growthnbhdata, Plot[Site == 'GRA' & Focal_sp == 'OVAT' & Plot == 'A' & Tree == '3'] <- 'Z')
-growthnbhdata <- within(growthnbhdata, Focal_sp[Site == 'GRA' & Focal_sp == 'OVAT' & Plot == 'Z' & Tree == '3'] <- 'VIMI')
-
-growthnbhdata <- within(growthnbhdata, Plot[Site == 'GRA' & Focal_sp == 'OVAT' & Plot == 'A' & Tree == '4'] <- 'Z')
-growthnbhdata <- within(growthnbhdata, Focal_sp[Site == 'GRA' & Focal_sp == 'OVAT' & Plot == 'Z' & Tree == '4'] <- 'VIMI')
-
-## Removing dodgy values where the band came off etc. See notes, many things to adjust.
-# do this!*
-#EPF VIMI B1 is an ovata. Updating this to OVAT Z1 (adjust plot later!)
-growthnbhdata <- within(growthnbhdata, Plot[Site == 'EPF' & Focal_sp == 'VIMI' & Plot == 'B' & Tree == '1'] <- 'Z')
-growthnbhdata <- within(growthnbhdata, Focal_sp[Site == 'EPF' & Focal_sp == 'VIMI' & Plot == 'Z' & Tree == '1'] <- 'OVAT')
-
-#Renaming species' names from AMYG to Eucalyptus amygdalina etc.
-#not working atm **
-# growthnbhdata <- growthnbhdata %>% mutate(Focal_sp = recode(Focal_sp, "AMYG" = "Eucalyptus amygdalina",
-#                                                       "OBLI" = "Eucalyptus obliqua",
-#                                                       "OVAT" = "Eucalyptus ovata",
-#                                                       "VIMI" = "Eucalyptus viminalis"))
+#Scaling PC1 and PC2
+growthnbhdata$std_PC1 <- scale(growthnbhdata$PC1, center = TRUE, scale = TRUE)[,1]
+growthnbhdata$std_PC2 <- scale(growthnbhdata$PC2, center = TRUE, scale = TRUE)[,1]
 
 #### Add categorical information for whether sites are wet or dry
 growthnbhdata$site_climate <- growthnbhdata$Site

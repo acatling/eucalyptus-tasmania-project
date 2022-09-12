@@ -433,6 +433,13 @@ geom_point(cex=3, alpha =0.4)+
 #Check that these negatives make sense
 climate_diff <- climate_diff %>% mutate(anomaly = monthly_period_md-norm_md)
 
+## How to calculate this as a proportion?
+#problem: -500/-300 = 1.6, and 500/300 = 1.6 but opposite scenarios (1.6x wetter, 1.6x drier)
+#... this is tricky!
+#https://math.stackexchange.com/questions/716767/how-to-calculate-the-percentage-of-increase-decrease-with-negative-numbers
+# some useful info
+#Could I write something that says if period value < norm value, add negative sign?
+
 ggplot(climate_diff, aes (x = Site, y = anomaly, colour = Period))+
   geom_point(cex=3, alpha =0.4)+
   theme_classic()
