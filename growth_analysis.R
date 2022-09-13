@@ -638,7 +638,6 @@ vif(oblimod1)
 #great
 
 ### OVAT ####
-## fix this** duplicated std_dbh
 ovatmod1 <- lmer(sqrt(growth_rate) ~ std_total_nci + std_norm_md + std_anomaly + 
                    std_norm_md:std_total_nci + std_dbh + std_PC1 +
                    (1|Site/Plot/Tree), ovatdata)
@@ -694,17 +693,6 @@ AIC(ovatmod1, ovatmod2)
 #mod 2 significantly better
 AIC(vimimod1, vimimod2)
 #mod 2 significantly better
-
-### R squared of models
-#14-27%
-r.squaredGLMM(amygmod1)
-r.squaredGLMM(amygmod2)
-r.squaredGLMM(oblimod1)
-r.squaredGLMM(oblimod2)
-r.squaredGLMM(ovatmod1)
-r.squaredGLMM(ovatmod2)
-r.squaredGLMM(vimimod1)
-r.squaredGLMM(vimimod2)
 
 #### Plotting growth rate ~ NCI from total NCI model ####
 #all species
@@ -964,6 +952,28 @@ for(i in 1:length(specieslist)){
 }
 dev.off()
 
+#### Growth rate ~ MD boxplot ####
+ggplot(growthnbhdata, aes(x = std_norm_md, y = sqrt(growth_rate), color=site_climate)) +
+  geom_boxplot()+
+  geom_point(position = (position_jitter(width = .2)))+
+  theme_bw()+
+  facet_wrap(~Focal_sp, scales="fixed")
+
+ggplot(growthnbhdata, aes(x = site_climate, y = sqrt(growth_rate))) +
+  geom_boxplot()+
+  geom_point(position = (position_jitter(width = .2)), alpha=0.4)+
+  theme_bw()+
+  facet_wrap(~Focal_sp, scales="fixed")
+
+growthmd <- lmer(sqrt(growth_rate) ~ site_climate + std_PC1 + (1|Site/Plot/Tree), amygdata)
+summary(growthmd)
+growthmd <- lmer(sqrt(growth_rate) ~ site_climate + std_PC1 + (1|Site/Plot/Tree), oblidata)
+summary(growthmd)
+growthmd <- lmer(sqrt(growth_rate) ~ site_climate + std_PC1 + (1|Site/Plot/Tree), ovatdata)
+summary(growthmd)
+growthmd <- lmer(sqrt(growth_rate) ~ site_climate + std_PC1 + (1|Site/Plot/Tree), vimidata)
+summary(growthmd)
+
 
 #### All species - plotting interaction between climate and NCI ####
 
@@ -1177,7 +1187,7 @@ dev.off()
 #climate_diff has period-level long-term MD and period MD, and anomaly
 climatetable <- left_join(climate_diff, simpleResTas)
 #Table with period-level long-term MD and actual/period MD and anomaly
-climatetable <- climatetable %>% dplyr::select(Site, Period, PPT, norm_md, monthly_period_md, anomaly)
+climatetable <- climatetable %>% select(Site, Period, PPT, norm_md, monthly_period_md, anomaly)
 #pivot wider
 periodnormwide <- climatetable %>% pivot_wider(id_cols = Site, names_from = Period, values_from = norm_md)
 colnames(periodnormwide) <- c('Site', 'Norm MD 1', 'Norm MD 2')
@@ -1211,12 +1221,12 @@ climatetable2 <- climatetable2[, col_order]
 samplesizes <- onerowdata %>% group_by(Site, Focal_sp) %>% 
   summarise(number_focals = n())
 samplesizes_long <- samplesizes %>% pivot_wider(id_cols = Site, names_from = Focal_sp, values_from = number_focals)
-site_climate <- onerowdata %>% group_by(Site, PPT, MD) %>% 
-  select(Site, PPT, MD, period_rainfall, period_md) %>% filter(row_number() == 1)
+site_climate <- onerowdata %>% group_by(Site, PPT, CMD) %>% 
+  select(Site, PPT, CMD, period_rainfall, period_md) %>% filter(row_number() == 1)
 site_table <- left_join(site_climate, samplesizes_long)
 site_table <- site_table %>% replace(is.na(.), 0)
 #Rearranging rows by site from wettest to driest
-site_table <- site_table %>% arrange(desc(MD))
+site_table <- site_table %>% arrange(desc(CMD))
 #Renaming column names
 colnames(site_table) <- c('Site', 'Mean PPT', "Mean MD", "Period PPT", "Period MD", "E. amygdalina", "E. ovata", "E. viminalis", "E. obliqua")
 
@@ -1243,6 +1253,83 @@ site_table2 %>%
   row_spec(0, italic = T) %>%
   add_header_above(c(" " = 2, "Number of focal trees" = 4))
 
+
+#### Table of model output ####
+## Extracting values for all in a loop
+model_list <- list(amygmod1, oblimod1, ovatmod1, vimimod1)
+effects = lapply(1:length(model_list), function(x) {
+  as.data.frame(coef(summary(model_list[[x]]))) %>% mutate(Species=paste0(x))})
+effects_table <- do.call("rbind", effects)
+
+#Make rownames a column 
+effects_table <- cbind(Effect = rownames(effects_table), effects_table)
+#Remove rownames
+rownames(effects_table) <- NULL
+
+#Renaming effects since loop adding values to ends
+effects_table$Effect[startsWith(effects_table$Effect, '(Intercept)')] <- 'Intercept'
+effects_table$Effect[startsWith(effects_table$Effect, 'std_PC1')] <- 'std_PC1'
+effects_table$Effect[startsWith(effects_table$Effect, 'std_norm_md')] <- 'std_norm_md'
+effects_table$Effect[startsWith(effects_table$Effect, 'std_anomaly')] <- 'std_anomaly'
+effects_table$Effect[startsWith(effects_table$Effect, 'std_dbh')] <- 'std_dbh'
+effects_table$Effect[startsWith(effects_table$Effect, 'std_total_nci:std_norm_md')] <- 'total_nci:std_norm_md'
+effects_table$Effect[startsWith(effects_table$Effect, 'std_total_nci')] <- 'std_total_nci'
+
+effects_table <- within(effects_table, Species[Species == '1'] <- 'Eucalyptus amygdalina')
+effects_table <- within(effects_table, Species[Species == '2'] <- 'Eucalyptus obliqua')
+effects_table <- within(effects_table, Species[Species == '3'] <- 'Eucalyptus ovata')
+effects_table <- within(effects_table, Species[Species == '4'] <- 'Eucalyptus viminalis')
+#Renaming columns
+effects_table <- effects_table %>% select(Species, Effect, Estimate, 'SE' = 'Std. Error', 'p_value' = 'Pr(>|t|)')
+
+#Making column with Estimate (+/- SE) and p value asterisks all combined
+#effects_table$collated <- sprintf("%1.1f ± %1.1f", effects_table$Estimate, effects_table$SE)
+
+#Add column for asterisks based on below function
+effects_table <- effects_table %>% mutate(p_asterisks = case_when(p_value >=0.05~"",
+                                                                            p_value <0.001~"***",
+                                                                            p_value <0.01~"**",
+                                                                            p_value <0.05~"*"))
+effects_table$collated <- sprintf("%1.3f ± %1.2f%s", effects_table$Estimate, effects_table$SE, effects_table$p_asterisks)
+
+germ_effects_kbl <- effects_table %>% select(Species, Effect, collated)
+
+germ_effects_kbl <- germ_effects_kbl %>% group_by(Species) %>% mutate(row = row_number()) %>%
+  pivot_wider(names_from = Species, values_from = collated) %>% select(-row)
+
+#Plotting with kableR
+germ_effects_kbl %>% mutate(Effect = c("Intercept", "Total NCI", "Norm MD", "MD anomaly", "Initial DBH", "PC1", "Total NCI:Norm MD")) %>%
+  kbl(align = 'lcccc', caption = "<b>Supplementary X</b>. Model output table with Estimate ± SE for each species modelled separately. Asterisks denote significance: * p<0.05, ** p<0.01, *** p<0.001") %>%
+  kable_classic(full_width = T, html_font = "Times", font_size = 12) %>%
+  row_spec(0, italic = T)
+
+#### Table of r squared values from models ####
+rsquaredtable <- matrix(ncol=2, nrow = 4)
+colnames(rsquaredtable) <- c('Species', 'Marginal R squared')
+rsquaredtable <- as.data.frame(rsquaredtable)
+
+rsquaredtable[1,1] <- 'Eucalyptus amygdalina'
+rsquaredtable[2,1] <- 'Eucalyptus obliqua'
+rsquaredtable[3,1] <- 'Eucalyptus ovata'
+rsquaredtable[4,1] <- 'Eucalyptus viminalis'
+rsquaredtable[1,2] <- r.squaredGLMM(amygmod1)[1,1]
+rsquaredtable[2,2] <- r.squaredGLMM(oblimod1)[1,1]
+rsquaredtable[3,2] <- r.squaredGLMM(ovatmod1)[1,1]
+rsquaredtable[4,2] <- r.squaredGLMM(vimimod1)[1,1]
+
+rsquaredtable %>% kbl(caption = "<b>Supplementary X</b>. Model marginal R squared values for each species modelled separately.", digits = 2) %>%
+  kable_classic(full_width = F, html_font = "Times", font_size = 12)
+
+### R squared of models
+#14-27%
+r.squaredGLMM(amygmod1)
+r.squaredGLMM(amygmod2)
+r.squaredGLMM(oblimod1)
+r.squaredGLMM(oblimod2)
+r.squaredGLMM(ovatmod1)
+r.squaredGLMM(ovatmod2)
+r.squaredGLMM(vimimod1)
+r.squaredGLMM(vimimod2)
 
 ########################
 #### BELOW HERE NEEDS TO BE UPDATED ####
@@ -1338,63 +1425,6 @@ ggplot(growthnbhsimple, aes(x = log(No_neighbours), y = growth_rate))+
   my_theme
 
 ###################
-############## Looking at just total neighbour abundance for Holsworth
-#Can't figure it out :(
-
-ggplot(growthmatchsimple, aes(x = log(No_neighbours), y = growth_rate))+
-  geom_jitter(aes(colour = Focal_sp), alpha = 0.6, width = 0.05)+
-  geom_smooth(colour = "grey24", method = "lm")+
-  ylab("Growth rate (mm/day)")+
-  xlab("log(Neighbour abundance)")+
-  theme_classic()+
-  theme(axis.title.x = element_text(size = 14, face = "bold"),
-        axis.title.y = element_text(size = 14, face = "bold"),
-        axis.text = element_text(size = 12),
-        strip.text.x = element_text(size = 12, face = "italic"),
-        # legend.text = element_text(size = 10),
-        # legend.title = element_blank(),
-        legend.position = "none")+
-  facet_wrap(vars(Focal_sp))
-
-
-#Plotting as above but by MD values instead - remember this is WET to DRY
-ggplot(aes(x = MD, y = growth_rate), data = dbhnumeric) +
-  geom_jitter(aes(colour = Focal_sp), alpha = 0.3, width = 10)+
-  geom_smooth(colour = "grey24", method = "lm")+
-  xlab("Aridity / Moisture deficit (mm)")+
-  ylab("Growth rate (mm/day)")+
-  theme_classic()+
-  theme(axis.title.x = element_text(size = 14, face = "bold"),
-        axis.title.y = element_text(size = 14, face = "bold"),
-        axis.text = element_text(size = 12),
-        strip.text.x = element_text(size = 12, face = "italic"),
-        legend.position = "none")+
-  facet_wrap(vars(Focal_sp))
-# legend.text = element_text(size = 14),
-# legend.title = element_blank()
-# legend.position = "none"
-
-
-intramod1 <- lm(growth_rate ~ log(Intra_abundance+1), growthmatchsimple)
-summary(intramod1)
-r.squaredGLMM(intramod1)
-intermod1 <- lm(growth_rate ~ log(Inter_abundance+1), growthmatchsimple)
-summary(intermod1)
-r.squaredGLMM(intermod1)
-
-specieslong <- c("Eucalyptus amygdalina", "Eucalyptus obliqua", "Eucalyptus ovata", "Eucalyptus viminalis")
-for(i in 1:length(specieslong)){
-  nam <- paste0("matchdata", specieslong[i])
-  assign(nam, filter(growthmatchsimple, Focal_sp == specieslong[i]))
-  print(specieslong[i])
-  print(
-    summary(
-      lm(growth_rate ~ log(Inter_abundance+1), data = filter(growthmatchsimple, Focal_sp == specieslong[i]))))
-}
-
-ovatintra1 <- lm(growth_rate ~ log(Inter_abundance+1), data = filter(growthmatchsimple, Focal_sp == "Eucalyptus ovata"))
-summary(ovatinter1)
-
 ### Visualising more basic trends ####
 #Plot growth by species by site
 ggplot(growthnbhdata, aes(x = Focal_sp, y = growth_rate, color=Site)) +
@@ -1503,18 +1533,3 @@ ggplot(growthalldata, aes(x = PPT, y = Growth_mm))+
   geom_smooth()+
   theme_bw()+
 facet_wrap(~Species, ncol = 2, nrow = 2, scales="free") 
-
-
-#### Basic linear model #### Stuff from Honours year, it works but not sure how to get CI yet
-# Fit a linear model for the fixed effect of initial DBH on Growth
-model1.1 <- lm(growth_rate ~ log_DBH, data = test)
-
-# Check model summary and R squared values
-summary(model1.1)
-
-# Plot the raw data and overlay the fit of Model1.1
-ggplot(dbhnumeric, aes(x = log_DBH, y = growth_rate))+ 
-  geom_point(alpha = 0.4)+
-  geom_abline(intercept = model1.1[1]$coefficients[1], 
-              slope = model1.1[1]$coefficients[2], lwd = 1.2, colour = "forestgreen") + 
-  theme_classic()
