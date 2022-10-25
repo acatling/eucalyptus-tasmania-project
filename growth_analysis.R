@@ -7,7 +7,7 @@ source("data_preparations.R")
 
 library(kableExtra)
 library(sf)
-#library(dplyr)
+library(ggrepel)
 library(ggfortify)
 
 #### PCA of soil ####
@@ -40,20 +40,9 @@ ggplot(growthnbhdata, aes(x = std_PC2, y = sqrt(growth_rate)))+
   geom_smooth(method="lm", aes(colour = Period))+
   theme_classic()+
   ylab("sqrt(Growth rate (mm/day))")+
-  xlab("std_PC1")+
+  xlab("std_PC2")+
   my_theme+
   facet_wrap(~Focal_sp)
-
-### Plotting GPS coordinates of trees
-#Just check Google My Maps!
-# mapfocaldata <- growthdata %>% select(Focal_sp, Site, Plot, Lat, Lon)
-# my_sf <- st_as_sf(mapfocaldata, coords = c('Lon', 'Lat'))
-# my_sf <- st_set_crs(my_sf, crs = 4326)
-test <- my_sf %>% filter(Focal_sp == "VIMI", Site == "TMP")
-view(test)
-  ggplot(test) +
-  geom_sf()+
-  theme_bw()
 
 #### Visualising distributions of data ####
 #square root transformation for growth values, growth rates, 
@@ -257,7 +246,7 @@ TukeyHSD(modelsite1)
 # in directions we would expect. More basal area at wettest site, lowest at driest site
 
 #### How do NCI, basal area and density vary with climate? ####
-ggplot(growthnbhdata, aes(x = MD, y = total_nbh_ba))+
+ggplot(growthnbhdata, aes(x = CMD, y = total_nbh_ba))+
   geom_jitter(alpha = 0.2, width = 4)+
   geom_smooth(method="lm")+
   geom_errorbar(stat="summary", fun.data="mean_se",width=1.5,size=1.2, colour = 'red')+
@@ -269,7 +258,7 @@ summary(modelmd1)
 #Yes, certainly more basal area of neighbours at wetter sites
 
 ## NUMBER OF NEIGHBOURS
-growthnbhdata %>% mutate(Site = fct_reorder(Site, desc(MD))) %>%
+growthnbhdata %>% mutate(Site = fct_reorder(Site, desc(CMD))) %>%
   ggplot(aes(x = Site, y = log(number_neighbours)))+
   geom_boxplot()+
   geom_jitter(alpha = 0.4, colour = "dodgerblue")+
@@ -342,20 +331,21 @@ ggplot(growthnbhdata, aes(x = MD, y = sqrt(total_nbh_ba), group = Site))+
   geom_jitter(alpha = 0.4, colour = "dodgerblue", position = (position_jitter(width = 5)))+
   theme_classic()
 
-#MD and NCI correlated
+#MD and NCI somewhat correlated
 dev.off()
 pdf("Output/nci~md.pdf", width=21, height=21)
 par(pty="s")
 growthnbhdata %>% filter(Period == 2) %>%
-  ggplot(aes(x = std_md, y = log_total_nci))+
+  ggplot(aes(x = std_cmd, y = log_total_nci))+
   geom_jitter(alpha = 0.4, width = 0.05)+
   geom_smooth(method="lm")+
   xlab("Moisture deficit (mean annual precipitation - mean annual evapotranspiration, standardised)")+
   ylab("log(Neighbourhood crowding index)")+
-  theme_classic()
+  theme_classic()+
+  facet_wrap(~Focal_sp)
 dev.off()
 
-modelpptnci <- lmer(log_total_nci ~ std_md + (1|Site/Plot/Tree), onerowdata)
+modelpptnci <- lmer(log_total_nci ~ std_norm_md + (1|Site/Plot/Tree), onerowdata)
 summary(modelpptnci)
 r.squaredGLMM(modelpptnci)
 
@@ -498,7 +488,7 @@ dev.off()
 # problem with OVAT model?
 for (i in 1:length(speciesabbrevlist)){
   print(speciesabbrevlist[i])
-  growthquadnci <- lmer(sqrt(growth_rate) ~ std_md + I(std_md^2) + (1|Site/Plot/Tree), data = filter(growthnbhdata, Focal_sp == speciesabbrevlist[i]))
+  growthquadnci <- lmer(sqrt(growth_rate) ~ std_norm_md + I(std_norm_md^2) + (1|Site/Plot/Tree), data = filter(growthnbhdata, Focal_sp == speciesabbrevlist[i]))
   print(summary(growthquadnci))
 }
 #Plotting if quadratic 
@@ -509,12 +499,12 @@ par(mar=c(4,6,2,1))
 par(pty="s")
 for(i in 1:length(specieslist)){
   plotted.data<-as.data.frame(specieslist[i])
-  plot(jitter(sqrt(plotted.data$growth_rate), amount = 0.05) ~ plotted.data$std_md, pch=19, col="grey60", ylab="Growth rate (sqrt, standardised)", xlab="Long-term MD (standardised)", cex.lab=2, cex.axis=2.00,tck=-0.01)
+  plot(jitter(sqrt(plotted.data$growth_rate), amount = 0.05) ~ plotted.data$std_norm_md, pch=19, col="grey60", ylab="Growth rate (sqrt, standardised)", xlab="Long-term MD (standardised)", cex.lab=2, cex.axis=2.00,tck=-0.01)
   mtext(paste(letters[i], ")", sep=""), side=2,line=1,adj=1.5,las=1, padj=-13, cex=1.5)
   title(main=bquote(italic(.(speciesnamelist[i]))), cex.main=2.5)
-  x_to_plot<-seq.func(plotted.data$std_md) 
-  model<-lmer(sqrt(growth_rate) ~ std_md + I(std_md^2) + (1|Site/Plot/Tree), plotted.data)
-  model2<-lmer(sqrt(growth_rate) ~ std_md + (1|Site/Plot/Tree), plotted.data)
+  x_to_plot<-seq.func(plotted.data$std_norm_md) 
+  model<-lmer(sqrt(growth_rate) ~ std_norm_md + I(std_norm_md^2) + (1|Site/Plot/Tree), plotted.data)
+  model2<-lmer(sqrt(growth_rate) ~ std_norm_md + (1|Site/Plot/Tree), plotted.data)
   if(summary(model)$coefficients[3,5]<0.05){
     preddata <- with(model, data.frame(1, x_to_plot, x_to_plot^2))
     plotted.pred <- glmm.predict(mod = model, newdat = preddata, se.mult = 1.96, logit_link=FALSE, log_link=FALSE, glmmTMB=FALSE)
@@ -528,180 +518,16 @@ for(i in 1:length(specieslist)){
 dev.off()
 
 
-###### Research questions: climate vs competition main models #####
-# How does sensitivity of growth to climate vary with competition?
-#only looking at MD
-
-####  Main models by species
-### Total nci only model:
-#growth ~ NCI + long-term climate + period climate + NCI*period climate +
-#initial DBH + initial DBH*NCI + initial DBH*period climate +(1|Site/Plot/Tree)
-
-### Intra and inter nci model:
-#growth ~ NCI intra + NCI inter + long-term climate + period climate + 
-#NCI intra*period climate + NCI inter*period climate +
-#initial DBH + initial DBH*period climate + initial DBH*NCI intra + 
-#initial DBH*NCI inter + (1|Site/Plot/Tree)
-
-### AMYG ####
-
-#initial model:
-# amygmod1 <- lmer(sqrt(growth_rate) ~ std_total_nci + std_md + std_period_md + 
-#                    std_total_nci*std_period_md + DBH_cm + DBH_cm*std_total_nci +
-#                    DBH_cm*std_period_md + (1|Site/Plot/Tree), amygdata)
-#removing DBH interactions from now, solves my vif problem!
-
-#norm md: long-term 'norm' md calculated for growing months
-#anomaly is period md calculated for growing months - norm_md
-
-### Different possible climate models:
-## 1) Norm + period + norm:NCI 
-#std_norm_md + std_monthly_period_md + std_norm_md:std_total_nci
-
-## 2) norm + anomalies + norm:NCI
-# i. What matters is the normal climate of a site and/or the number/magnitude of anomalous events
-#std_norm_md + std_anomaly + std_norm_md:std_total_nci
-
-## 3) Norm + period + period:NCI
-# i. What matters is the normal climate of a site plus what happens specifically in a given growth period layered on top
-#std_norm_md + std_monthly_period_md + std_monthly_period_md:std_total_nci
-
-## 4) Period + period:NCI
-# Only growth period climate that matters
-# std_monthly_period_md + std_monthly_period_md:NCI
-
-# amygmod1 <- lmer(sqrt(growth_rate) ~ std_total_nci + std_norm_md + std_anomaly + 
-#                    std_norm_md:std_total_nci + std_dbh + std_PC1 +
-#                    (1|Site/Plot/Tree), amygdata)
-#terrible residuals!
-
-amygmod1 <- lmer(sqrt(growth_rate) ~ std_total_nci + std_norm_md + std_anomaly + 
-                                      std_norm_md:std_total_nci + std_dbh + std_PC1 +
-                                      (1|Site/Plot/Tree), amygdata)
-amygmod1dharma <- simulateResiduals(amygmod1)
-plot(amygmod1dharma)
-#terrible
-summary(amygmod1)
-vif(amygmod1)
-#great
-#plot(amygmod1)
-
-## Try removing period md (could replace with anomalies)
-# amygmod1 <- lmer(sqrt(growth_rate) ~ std_total_nci + std_md + 
-#                     + DBH_cm + DBH_cm*std_total_nci +
-#                    (1|Site/Plot/Tree), amygdata)
-# vif(amygmod1)
-
-## Try removing long-term md?
-# amygmod1 <- lmer(sqrt(growth_rate) ~ std_total_nci + std_period_md + 
-#                    std_total_nci*std_period_md + DBH_cm + DBH_cm*std_total_nci +
-#                    DBH_cm*std_period_md + (1|Site/Plot/Tree), amygdata)
-# vif(amygmod1)
-#still problems with NCI and period_md and DBH_cm
-
-## Try removing NCI
-# amygmod1 <- lmer(sqrt(growth_rate) ~ std_md + std_period_md + 
-#                    + DBH_cm +
-#                    DBH_cm*std_period_md + (1|Site/Plot/Tree), amygdata)
-# vif(amygmod1)
-
-### intraspecific and interspecific NCIs model, mod2
-amygmod2 <- lmer(sqrt(growth_rate) ~ std_intra_nci + std_inter_nci + std_norm_md + 
-                   std_anomaly + std_norm_md:std_intra_nci + std_norm_md:std_inter_nci + 
-                   std_dbh + PC1 + (1|Site/Plot/Tree), amygdata)
-amygmod2dharma <- simulateResiduals(amygmod2)
-plot(amygmod2dharma)
-#terrible residuals
-summary(amygmod2)
-vif(amygmod1)
-#great
-
-### OBLI ####
-oblimod1 <- lmer(sqrt(growth_rate) ~ std_total_nci + std_norm_md + std_anomaly + 
-                   std_norm_md:std_total_nci + std_dbh + std_PC1 +
-                   (1|Site/Plot/Tree), oblidata)
-oblimod1dharma <- simulateResiduals(oblimod1)
-plot(oblimod1dharma)
-#okay
-summary(oblimod1)
-vif(oblimod1)
-#great
-
-oblimod2 <- lmer(sqrt(growth_rate) ~ std_intra_nci + std_inter_nci + std_norm_md + 
-                   std_anomaly + std_norm_md:std_intra_nci + std_norm_md:std_inter_nci + 
-                   std_dbh + PC1 + (1|Site/Plot/Tree), oblidata)
-oblimod2dharma <- simulateResiduals(oblimod2)
-plot(oblimod2dharma)
-#okay
-summary(oblimod2)
-vif(oblimod1)
-#great
-
-### OVAT ####
-ovatmod1 <- lmer(sqrt(growth_rate) ~ std_total_nci + std_norm_md + std_anomaly + 
-                   std_norm_md:std_total_nci + std_dbh + std_PC1 +
-                   (1|Site/Plot/Tree), ovatdata)
-ovatmod1dharma <- simulateResiduals(ovatmod1)
-plot(ovatmod1dharma)
-#terrible residuals
-summary(ovatmod1)
-vif(ovatmod1)
-#great
-plot(ovatmod1)
-### 
-qqp(ranef(ovatmod1)$`Plot:Site`[,1])
-qqp(ranef(ovatmod1)$`Plot:Site`[,1])
-
-ovatmod2 <- lmer(sqrt(growth_rate) ~ std_intra_nci + std_inter_nci + std_norm_md + 
-                   std_anomaly + std_norm_md:std_intra_nci + std_norm_md:std_inter_nci + 
-                   std_dbh + PC1 + (1|Site/Plot/Tree), ovatdata)
-ovatmod2dharma <- simulateResiduals(ovatmod2)
-plot(ovatmod2dharma)
-#terrible residuals
-summary(ovatmod2)
-vif(ovatmod1)
-#great
-
-### VIMI ####
-vimimod1 <- lmer(sqrt(growth_rate) ~ std_total_nci + std_norm_md + std_anomaly + 
-                   std_norm_md:std_total_nci + std_dbh + std_PC1 +
-                   (1|Site/Plot/Tree), vimidata)
-vimimod1dharma <- simulateResiduals(vimimod1)
-plot(vimimod1dharma)
-#great
-summary(vimimod1)
-vif(vimimod1)
-#great
-
-vimimod2 <- lmer(sqrt(growth_rate) ~ std_intra_nci + std_inter_nci + std_norm_md + 
-                   std_anomaly + std_norm_md:std_intra_nci + std_norm_md:std_inter_nci + 
-                   std_dbh + PC1 + (1|Site/Plot/Tree), vimidata)
-vimimod2dharma <- simulateResiduals(vimimod2)
-plot(vimimod2dharma)
-#great
-summary(vimimod2)
-vif(vimimod1)
-#great
-
-### AIC - Is total NCI or intra and inter better model? 
-#AMYG
-AIC(amygmod1, amygmod2)
-#mod 2 significantly better
-AIC(oblimod1, oblimod2)
-#mod 2 significantly better
-AIC(ovatmod1, ovatmod2)
-#mod 2 significantly better
-AIC(vimimod1, vimimod2)
-#mod 2 significantly better
-
+###############
+### Below plots aren't updated for final model ####
 #### Plotting growth rate ~ NCI from total NCI model ####
 #all species
 dev.off()
 pdf("Output/growth_rate~NCI.pdf", width=21, height=21)
 par(pty="s")
 plot(sqrt(growth_rate) ~ std_total_nci, pch=19, col=alpha("grey60", 0.3), ylab="sqrt(Growth rate (mm/day))", xlab="Neighbourhood crowding index (standardised, sqrt)", tck=-0.01, cex= 2, cex.lab = 2, cex.axis = 2, growthnbhdata)
-model<-lmer(sqrt(growth_rate) ~ std_dbh + Focal_sp + std_ppt + 
-              std_total_nci + std_dbh*std_total_nci + Focal_sp:std_dbh + std_ppt:std_total_nci +
+model<-lmer(sqrt(growth_rate) ~ std_preceding_dbh + Focal_sp + std_ppt + 
+              std_total_nci + std_preceding_dbh*std_total_nci + Focal_sp:std_preceding_dbh + std_ppt:std_total_nci +
               (1|Site/Plot/Tree), growthnbhdata)
 x_to_plot<-seq.func(growthnbhdata$std_total_nci)
 #mean NCI - black
@@ -718,8 +544,11 @@ dev.off()
 dev.off()
 pdf("Output/AMYG_growth_rate~NCI+MD.pdf", width=21, height=21)
 par(pty="s")
-plot(sqrt(growth_rate) ~ std_total_nci, pch = ifelse(Period==1, 19, 17), col = alpha(ifelse(std_md>0, "forestgreen", "red"), 0.4), ylab="sqrt(Growth rate (mm/day))", xlab="Neighbourhood crowding index (standardised, sqrt)", tck=-0.01, cex= 2, cex.lab = 2, cex.axis = 2, amygdata)
-model<-lmer(sqrt(growth_rate) ~ std_total_nci + std_md + std_period_md + 
+plot(sqrt(growth_rate) ~ std_total_nci, pch = ifelse(Period==1, 19, 17), col = alpha(ifelse(std_norm_md>0, "forestgreen", "red"), 0.4), ylab="sqrt(Growth rate (mm/day))", xlab="Neighbourhood crowding index (standardised, sqrt)", tck=-0.01, cex= 2, cex.lab = 2, cex.axis = 2, amygdata)
+lmer(sqrt(growth_rate) ~ std_total_nci + std_norm_md + std_anomaly + 
+       std_norm_md:std_total_nci + std_preceding_dbh + std_preceding_dbh:std_total_nci +
+       std_preceding_dbh:std_norm_md + std_PC1 + (1|Site/Plot/Tree)
+model<-lmer(sqrt(growth_rate) ~ std_total_nci + std_norm_md + std_period_md + 
               std_total_nci*std_period_md + DBH_cm + DBH_cm*std_total_nci +
               DBH_cm*std_period_md + (1|Site/Plot/Tree), amygdata)
 x_to_plot<-seq.func(amygdata$std_total_nci)
@@ -744,9 +573,9 @@ dev.off()
 pdf("Output/AMYG_growth_rate~NCI+period_MD.pdf", width=21, height=21)
 par(pty="s")
 plot(sqrt(growth_rate) ~ std_total_nci, pch = ifelse(Period==1, 19, 17), col = alpha(ifelse(std_period_md>0, "forestgreen", "red"), 0.4), ylab="sqrt(Growth rate (mm/day))", xlab="Neighbourhood crowding index (standardised, sqrt)", tck=-0.01, cex= 2, cex.lab = 2, cex.axis = 2, amygdata)
-model<-lmer(sqrt(growth_rate) ~ std_total_nci + std_md + std_period_md + 
-              std_total_nci*std_period_md + std_dbh + std_dbh*std_total_nci +
-              std_dbh*std_period_md + (1|Site/Plot/Tree), amygdata)
+model<-lmer(sqrt(growth_rate) ~ std_total_nci + std_norm_md + std_period_md + 
+              std_total_nci*std_period_md + std_preceding_dbh + std_preceding_dbh*std_total_nci +
+              std_preceding_dbh*std_period_md + (1|Site/Plot/Tree), amygdata)
 x_to_plot_low<-seq.func(amygdata$std_total_nci[amygdata$std_period_md<0])
 x_to_plot_high<-seq.func(amygdata$std_total_nci[amygdata$std_period_md>0])
 #low md - red
@@ -777,8 +606,8 @@ for(i in 1:length(specieslist)){
   plot(sqrt(growth_rate) ~ std_total_nci, pch = ifelse(Period==1, 19, 17), col = alpha(ifelse(std_period_md>0, "red", "forestgreen"), 0.4), ylab="sqrt(Growth rate (mm/day))", xlab="Neighbourhood crowding index (standardised, sqrt)", tck=-0.01, cex= 2, cex.lab = 2, cex.axis = 2, plotted.data)
   mtext(paste(letters[i], ")", sep=""), side=2,line=1,adj=1.5,las=1, padj=-13, cex=1.5)
   title(main=bquote(italic(.(speciesnamelist[i]))), cex.main=2.5)
-  model<-lmer(sqrt(growth_rate) ~ std_total_nci + std_md + std_period_md + 
-                std_total_nci*std_period_md + std_dbh + (1|Site/Plot/Tree), plotted.data)
+  model<-lmer(sqrt(growth_rate) ~ std_total_nci + std_norm_md + std_period_md + 
+                std_total_nci*std_period_md + std_preceding_dbh + (1|Site/Plot/Tree), plotted.data)
   x_to_plot_low<-seq.func(plotted.data$std_total_nci[plotted.data$std_period_md<0])
   #x_to_plot_mean<-seq.func(plotted.data$std_total_nci)
   x_to_plot_high<-seq.func(plotted.data$std_total_nci[plotted.data$std_period_md>0])
@@ -803,7 +632,7 @@ dev.off()
 pdf("Output/OVAT_growth_rate~NCI+period_MD.pdf", width=21, height=21)
 par(pty="s")
 plot(sqrt(growth_rate) ~ std_total_nci, pch = ifelse(Period==1, 19, 17), col = alpha(ifelse(std_period_md>0, "forestgreen", "red"), 0.4), ylab="sqrt(Growth rate (mm/day))", xlab="Neighbourhood crowding index (standardised, sqrt)", tck=-0.01, cex= 2, cex.lab = 2, cex.axis = 2, ovatdata)
-model<-lmer(sqrt(growth_rate) ~ std_total_nci + std_md + std_period_md + 
+model<-lmer(sqrt(growth_rate) ~ std_total_nci + std_norm_md + std_period_md + 
               std_total_nci*std_period_md + DBH_cm + DBH_cm*std_total_nci +
               DBH_cm*std_period_md + (1|Site/Plot/Tree), ovatdata)
 x_to_plot_low<-seq.func(ovatdata$std_total_nci[ovatdata$std_period_md<0])
@@ -825,7 +654,7 @@ dev.off()
 pdf("Output/VIMI_growth_rate~NCI+period_MD.pdf", width=21, height=21)
 par(pty="s")
 plot(sqrt(growth_rate) ~ std_total_nci, pch = ifelse(Period==1, 19, 17), col = alpha(ifelse(std_period_md>0, "forestgreen", "red"), 0.4), ylab="sqrt(Growth rate (mm/day))", xlab="Neighbourhood crowding index (standardised, sqrt)", tck=-0.01, cex= 2, cex.lab = 2, cex.axis = 2, vimidata)
-model<-lmer(sqrt(growth_rate) ~ std_total_nci + std_md + std_period_md + 
+model<-lmer(sqrt(growth_rate) ~ std_total_nci + std_norm_md + std_period_md + 
               std_total_nci*std_period_md + DBH_cm + DBH_cm*std_total_nci +
               DBH_cm*std_period_md + (1|Site/Plot/Tree), vimidata)
 x_to_plot_low<-seq.func(vimidata$std_total_nci[vimidata$std_period_md<0])
@@ -910,7 +739,7 @@ for(i in 1:length(specieslist)){
   mtext(paste(letters[i], ")", sep=""), side=2,line=1,adj=1.5,las=1, padj=-13, cex=1.5)
   title(main=bquote(italic(.(speciesnamelist[i]))), cex.main=2.5)
   model<-lmer(sqrt(growth_rate) ~ std_total_nci + std_norm_md + std_anomaly + 
-                std_norm_md:std_total_nci + std_dbh + std_PC1 + (1|Site/Plot/Tree), plotted.data)
+                std_norm_md:std_total_nci + std_preceding_dbh + std_PC1 + (1|Site/Plot/Tree), plotted.data)
   x_to_plot_low<-seq.func(plotted.data$std_total_nci[plotted.data$std_norm_md<0])
   x_to_plot_high<-seq.func(plotted.data$std_total_nci[plotted.data$std_norm_md>0])
   #low md - wet - green
@@ -936,7 +765,7 @@ for(i in 1:length(specieslist)){
   plot(jitter(sqrt(growth_rate), amount = 0.05) ~ std_period_md, pch = ifelse(Period==1, 19, 17), col = alpha(ifelse(std_total_nci>0, "forestgreen", "red"), 0.4), ylab="sqrt(Growth rate (mm/day))", xlab="Period MD (standardised)", tck=-0.01, cex= 2, cex.lab = 2, cex.axis = 2, plotted.data)
   mtext(paste(letters[i], ")", sep=""), side=2,line=1,adj=1.5,las=1, padj=-13, cex=1.5)
   title(main=bquote(italic(.(speciesnamelist[i]))), cex.main=2.5)
-  model<-lmer(sqrt(growth_rate) ~ std_total_nci + std_md + std_period_md + 
+  model<-lmer(sqrt(growth_rate) ~ std_total_nci + std_norm_md + std_period_md + 
                 std_total_nci*std_period_md + DBH_cm + DBH_cm*std_total_nci +
                 DBH_cm*std_period_md + (1|Site/Plot/Tree), plotted.data)
   x_to_plot_low<-seq.func(plotted.data$std_period_md[plotted.data$std_total_nci<0])
@@ -981,8 +810,8 @@ summary(growthmd)
 # #No significant interaction between PPT and NCI
 # # PPT is x
 # # NCI is set at -1, 0 or 1 (1 sd low, mean, or 1 sd high)
-# model1<-lmer(sqrt(growth_rate) ~ std_dbh + Focal_sp + std_ppt + 
-#               std_total_nci + std_dbh*std_total_nci + Focal_sp:std_dbh + std_ppt:std_total_nci +
+# model1<-lmer(sqrt(growth_rate) ~ std_preceding_dbh + Focal_sp + std_ppt + 
+#               std_total_nci + std_preceding_dbh*std_total_nci + Focal_sp:std_preceding_dbh + std_ppt:std_total_nci +
 #               (1|Site/Plot/Tree), growthnbhdata)
 # 
 # with(growthnbhdata, plot(jitter(sqrt(growth_rate), amount = 0.05) ~ std_ppt, col = ifelse(std_total_nci>0, "red", "blue")))
@@ -998,8 +827,8 @@ summary(growthmd)
 # pdf("Output/growth_rate~PPT+NCI.pdf", width=21, height=21)
 # par(pty="s")
 # plot(sqrt(growth_rate) ~ jitter(std_ppt, 1), pch=19, col=alpha("grey60", 0.2), ylab="sqrt(Growth rate (mm/day))", xlab="Mean annual precipitation (standardised)", tck=-0.01, cex= 2, cex.lab = 2, cex.axis = 2, growthnbhdata)
-# model<-lmer(sqrt(growth_rate) ~ std_dbh + Focal_sp + std_ppt + 
-#               std_total_nci + std_dbh*std_total_nci + Focal_sp:std_dbh + std_ppt:std_total_nci +
+# model<-lmer(sqrt(growth_rate) ~ std_preceding_dbh + Focal_sp + std_ppt + 
+#               std_total_nci + std_preceding_dbh*std_total_nci + Focal_sp:std_preceding_dbh + std_ppt:std_total_nci +
 #               (1|Site/Plot/Tree), growthnbhdata)
 # x_to_plot<-seq.func(growthnbhdata$std_ppt)
 # #mean NCI - black
@@ -1021,8 +850,8 @@ summary(growthmd)
 # pdf("Output/growth_rate~MD+NCI.pdf", width=21, height=21)
 # par(pty="s")
 # plot(sqrt(growth_rate) ~ jitter(std_ppt, 1), pch=19, col=alpha("grey60", 0.2), ylab="sqrt(Growth rate (mm/day))", xlab="Mean annual precipitation (standardised)", tck=-0.01, cex= 2, cex.lab = 2, cex.axis = 2, growthnbhdata)
-# model<-lmer(sqrt(growth_rate) ~ std_dbh + Focal_sp + std_ppt + 
-#               std_total_nci + std_dbh*std_total_nci + Focal_sp:std_dbh + std_ppt:std_total_nci +
+# model<-lmer(sqrt(growth_rate) ~ std_preceding_dbh + Focal_sp + std_ppt + 
+#               std_total_nci + std_preceding_dbh*std_total_nci + Focal_sp:std_preceding_dbh + std_ppt:std_total_nci +
 #               (1|Site/Plot/Tree), growthnbhdata)
 # x_to_plot<-seq.func(growthnbhdata$std_ppt)
 # #mean NCI - black
@@ -1073,7 +902,6 @@ ggplot(growthnbhdata, aes(x = Growth[Period==1], y = Growth[Period==2]))+
 ###
 
 
-
 ##### Do neighbour basal area or density influence growth? ####
 #Basal area
 ggplot(growthnbhdata, aes(x = sqrt(total_nbh_ba), y = sqrt(growth_rate)))+
@@ -1094,242 +922,6 @@ ggplot(growthnbhdata, aes(x = log(number_neighbours), y = sqrt(growth_rate)))+
   theme_classic()+
   my_theme+
   facet_wrap(~Focal_sp)
-
-#### Making a map of study sites ####
-#Read in the SA2 shapefile downloaded from the ABS
-#Data from ABS localities
-# https://www.abs.gov.au/AUSSTATS/abs@.nsf/DetailsPage/1270.0.55.001July%202016?OpenDocument
-#Following this guide: https://medium.com/analytics-vidhya/mapping-australia-in-r-6ce092c48b49
-
-ausplotdata <- read_sf("Data/SA2_2016_AUST.shp")
-head(ausplotdata)
-
-#filter the Australian SA2 shapefile for only Tas
-tasplotdata <- ausplotdata %>% filter(STE_NAME16 == "Tasmania")
-
-ggplot()+
-  geom_sf(data = ausplotdata)+
-  xlab("Longitude")+
-  ylab("Latitude") +
-  xlim(110,155)+
-  theme_classic()
-
-ggplot()+
-  geom_sf(data = ausplotdata)+
-  geom_sf(data = tasplotdata, fill = "blue") +
-  xlab("Longitude")+
-  ylab("Latitude") +
-  xlim(110,155)+
-  theme_classic()
-
-ggplot()+
-  geom_sf(data = tasplotdata) +
-  xlab("Longitude")+
-  ylab("Latitude") +
-  theme_classic()
-
-#import a shapefile of state boundaries
-aus_state_data <- read_sf("Data/STE_2016_AUST.shp")
-
-ggplot()+
-  geom_sf(data = aus_state_data)+
-  theme_classic()
-
-#make a new dataset of cities in Australia (google the locations)
-#"West Perenjori Nature Reserve", -29.46703, 116.20600
-tas_cities <- tribble(
-  ~city, ~lat, ~long, 
-  "Hobart",-42.881520, 147.326839,
-  "Launceston", -41.439881, 147.136506)
-
-#convert those two columns to geometry column with the st_as_sf() function. Google Maps uses the coordinate reference system 4326 (the GPS system).
-tas_cities_geometry <- tas_cities %>% 
-  st_as_sf(coords = c("long", "lat"), crs = 4326)
-
-ggplot() +
-  geom_sf(data=aus_state_data)+
-  geom_sf(data=tas_cities_geometry, size=1)+
-  geom_sf_label(data=tas_cities_geometry, aes(label = city))+
-  xlim(110,155)+
-  xlab("Longitude") +
-  ylab("Latitude") + 
-  theme_bw()
-
-#making dataframe for my study sites
-site_coords <- tribble(
-  ~site, ~lat, ~long, 
-  "EPF", -41.77497, 147.3183,
-  "TMP", -43.144035, 147.962669,
-  "MER", -41.56674,	146.24294,
-  "DOG", -41.5385778,	146.324706,
-  "GRA", -42.55066,	147.45885,
-  "FREY", -41.94839,	148.13788,
-  "BOF", -41.186032,	148.189604)
-
-#Making a plot of Tas with study sites marked
-dev.off()
-pdf("Output/Tas_study_sites_map.pdf")
-ggplot()+
-  geom_sf(data = tasplotdata, fill = "white") +
-  geom_sf_label(data=tas_cities_geometry, aes(label = city))+
-  geom_point(data = site_coords, aes(x = long, y = lat), size = 4, colour = "red", pch = 18) +  
-  xlab("Longitude")+
-  ylab("Latitude") +
-  xlim(144.5,148.5)+
-  ylim(-43.7, -40.5)+
-  theme_classic()+
-  theme(panel.border = element_rect(colour = "black", fill=NA, size = 1.5))
-dev.off()
-
-#### Table of sample sizes and site climate ####
-
-#simpleResTas has annual long-term PPT, PET and MD
-#climate_diff has period-level long-term MD and period MD, and anomaly
-climatetable <- left_join(climate_diff, simpleResTas)
-#Table with period-level long-term MD and actual/period MD and anomaly
-climatetable <- climatetable %>% select(Site, Period, PPT, norm_md, monthly_period_md, anomaly)
-#pivot wider
-periodnormwide <- climatetable %>% pivot_wider(id_cols = Site, names_from = Period, values_from = norm_md)
-colnames(periodnormwide) <- c('Site', 'Norm MD 1', 'Norm MD 2')
-periodactualwide <- climatetable %>% pivot_wider(id_cols = Site, names_from = Period, values_from = monthly_period_md)
-colnames(periodactualwide) <- c('Site', 'Actual MD 1', 'Actual MD 2')
-anomalydata <- climate_diff %>% pivot_wider(id_cols = Site, names_from = Period, values_from = anomaly)
-colnames(anomalydata) <- c('Site', 'Anomaly 1', 'Anomaly 2')
-climatetable2 <- left_join(periodnormwide, periodactualwide)
-site_ppt <- climatetable %>% select(Site, PPT)
-colnames(site_ppt) <- c('Site', 'Norm PPT')
-climatetable2 <- left_join(site_ppt, climatetable2) %>% group_by(Site) %>% filter(row_number() == 1)
-climatetable2 <- left_join(climatetable2, anomalydata)
-#Rearranging rows by site from driest to wettest
-climatetable2 <- climatetable2 %>% arrange(`Norm PPT`)
-#Rearranging columns
-col_order <- c('Site', 'Norm PPT', 'Norm MD', 'Actual MD 1', 'Anomaly 1', 'Norm MD 2', 'Actual MD 2', 'Anomaly 2')
-climatetable2 <- climatetable2[, col_order]
-#Can't figure out how to do names like this, problem with duplicated col names
-#colnames(climatetable2) <- c('Site', 'Norm PPT', 'Norm MD', 'Actual MD', 'Anomaly', 'Norm MD', 'Actual MD', 'Anomaly')
-
-  climatetable2 %>% select(-(`Norm PPT`)) %>%
-  kbl(caption = "<b>Supplementary 1</b>. Long-term average ('norm') moisture deficit (MD, precipitation - evapotranspiration), MD over the growth period ('actual'), and 
-  their difference ('anomaly') at each site by growth period (1 or 2). Long-term values downloaded 
-  from the Global Aridity and PET Database (Zomer et al. 2006) based on 1960-1990 WorldClim climate averages (Hijmans et al. 2005). Actual MD values calculated from 
-  BOM (ref*). MER is Mersey River Conservation Area, DOG is Dogs Head Regional Reserve, TMP is Tasman National Park, BOF is Doctors Peak Regional Reserve, 
-      EPF is Tom Gibson Nature Reserve, FREY is Apslawn Forest Reserve and GRA is Gravelly Ridge Conservation Area.", digits = 0) %>%
-  kable_classic(full_width = F, html_font = "Times") %>%
-  add_header_above(c(" " = 1, "Period 1" = 3, "Period 2" = 3))
-
-## Original table:
-samplesizes <- onerowdata %>% group_by(Site, Focal_sp) %>% 
-  summarise(number_focals = n())
-samplesizes_long <- samplesizes %>% pivot_wider(id_cols = Site, names_from = Focal_sp, values_from = number_focals)
-site_climate <- onerowdata %>% group_by(Site, PPT, CMD) %>% 
-  select(Site, PPT, CMD, period_rainfall, period_md) %>% filter(row_number() == 1)
-site_table <- left_join(site_climate, samplesizes_long)
-site_table <- site_table %>% replace(is.na(.), 0)
-#Rearranging rows by site from wettest to driest
-site_table <- site_table %>% arrange(desc(CMD))
-#Renaming column names
-colnames(site_table) <- c('Site', 'Mean PPT', "Mean MD", "Period PPT", "Period MD", "E. amygdalina", "E. ovata", "E. viminalis", "E. obliqua")
-
-site_table %>%
-  kbl(caption = "<b>Supplementary 1</b>. Number of focal trees and climate at each site ordered from driest to wettest based on mean annual moisture deficit (MD). Mean annual precipitation (PPT) and MD downloaded 
-  from the Global Aridity and PET Database (Zomer et al. 2006) based on 1960-1990 WorldClim climate averages (Hijmans et al. 2005). PPT and MD over the study period 
-  downloaded from BOM (ref*). MER is Mersey River Conservation Area, DOG is Dogs Head Regional Reserve, TMP is Tasman National Park, BOF is Doctors Peak Regional Reserve, 
-      EPF is Tom Gibson Nature Reserve, FREY is Apslawn Forest Reserve and GRA is Gravelly Ridge Conservation Area.", digits = 0) %>%
-  kable_classic(full_width = F, html_font = "Times") %>%
-  row_spec(0, italic = T) %>%
-  add_header_above(c(" " = 5, "Number of focal trees" = 4))
-
-####  Table with norm PPT and sample sizes
-site_table2 <- left_join(site_ppt, samplesizes_long) %>% replace(is.na(.), 0) %>% 
-  group_by(Site) %>% filter(row_number() == 1)
-site_table2 <- site_table2 %>% arrange(`Norm PPT`)
-colnames(site_table2) <- c('Site', 'Norm PPT', "E. amygdalina", "E. ovata", "E. viminalis", "E. obliqua")
-
-site_table2 %>%
-  kbl(caption = "<b>Supplementary 1</b>. Number of focal trees and long-term average precipitation (Norm PPT) at each site ordered from driest to wettest based. PPT values downloaded 
-  from the Global Aridity and PET Database (Zomer et al. 2006) based on 1960-1990 WorldClim climate averages (Hijmans et al. 2005). MER is Mersey River Conservation Area, DOG is Dogs Head Regional Reserve, TMP is Tasman National Park, BOF is Doctors Peak Regional Reserve, 
-      EPF is Tom Gibson Nature Reserve, FREY is Apslawn Forest Reserve and GRA is Gravelly Ridge Conservation Area.", digits = 0) %>%
-  kable_classic(full_width = F, html_font = "Times") %>%
-  row_spec(0, italic = T) %>%
-  add_header_above(c(" " = 2, "Number of focal trees" = 4))
-
-
-#### Table of model output ####
-## Extracting values for all in a loop
-model_list <- list(amygmod1, oblimod1, ovatmod1, vimimod1)
-effects = lapply(1:length(model_list), function(x) {
-  as.data.frame(coef(summary(model_list[[x]]))) %>% mutate(Species=paste0(x))})
-effects_table <- do.call("rbind", effects)
-
-#Make rownames a column 
-effects_table <- cbind(Effect = rownames(effects_table), effects_table)
-#Remove rownames
-rownames(effects_table) <- NULL
-
-#Renaming effects since loop adding values to ends
-effects_table$Effect[startsWith(effects_table$Effect, '(Intercept)')] <- 'Intercept'
-effects_table$Effect[startsWith(effects_table$Effect, 'std_PC1')] <- 'std_PC1'
-effects_table$Effect[startsWith(effects_table$Effect, 'std_norm_md')] <- 'std_norm_md'
-effects_table$Effect[startsWith(effects_table$Effect, 'std_anomaly')] <- 'std_anomaly'
-effects_table$Effect[startsWith(effects_table$Effect, 'std_dbh')] <- 'std_dbh'
-effects_table$Effect[startsWith(effects_table$Effect, 'std_total_nci:std_norm_md')] <- 'total_nci:std_norm_md'
-effects_table$Effect[startsWith(effects_table$Effect, 'std_total_nci')] <- 'std_total_nci'
-
-effects_table <- within(effects_table, Species[Species == '1'] <- 'Eucalyptus amygdalina')
-effects_table <- within(effects_table, Species[Species == '2'] <- 'Eucalyptus obliqua')
-effects_table <- within(effects_table, Species[Species == '3'] <- 'Eucalyptus ovata')
-effects_table <- within(effects_table, Species[Species == '4'] <- 'Eucalyptus viminalis')
-#Renaming columns
-effects_table <- effects_table %>% select(Species, Effect, Estimate, 'SE' = 'Std. Error', 'p_value' = 'Pr(>|t|)')
-
-#Making column with Estimate (+/- SE) and p value asterisks all combined
-#effects_table$collated <- sprintf("%1.1f ± %1.1f", effects_table$Estimate, effects_table$SE)
-
-#Add column for asterisks based on below function
-effects_table <- effects_table %>% mutate(p_asterisks = case_when(p_value >=0.05~"",
-                                                                            p_value <0.001~"***",
-                                                                            p_value <0.01~"**",
-                                                                            p_value <0.05~"*"))
-effects_table$collated <- sprintf("%1.3f ± %1.2f%s", effects_table$Estimate, effects_table$SE, effects_table$p_asterisks)
-
-germ_effects_kbl <- effects_table %>% select(Species, Effect, collated)
-
-germ_effects_kbl <- germ_effects_kbl %>% group_by(Species) %>% mutate(row = row_number()) %>%
-  pivot_wider(names_from = Species, values_from = collated) %>% select(-row)
-
-#Plotting with kableR
-germ_effects_kbl %>% mutate(Effect = c("Intercept", "Total NCI", "Norm MD", "MD anomaly", "Initial DBH", "PC1", "Total NCI:Norm MD")) %>%
-  kbl(align = 'lcccc', caption = "<b>Supplementary X</b>. Model output table with Estimate ± SE for each species modelled separately. Asterisks denote significance: * p<0.05, ** p<0.01, *** p<0.001") %>%
-  kable_classic(full_width = T, html_font = "Times", font_size = 12) %>%
-  row_spec(0, italic = T)
-
-#### Table of r squared values from models ####
-rsquaredtable <- matrix(ncol=2, nrow = 4)
-colnames(rsquaredtable) <- c('Species', 'Marginal R squared')
-rsquaredtable <- as.data.frame(rsquaredtable)
-
-rsquaredtable[1,1] <- 'Eucalyptus amygdalina'
-rsquaredtable[2,1] <- 'Eucalyptus obliqua'
-rsquaredtable[3,1] <- 'Eucalyptus ovata'
-rsquaredtable[4,1] <- 'Eucalyptus viminalis'
-rsquaredtable[1,2] <- r.squaredGLMM(amygmod1)[1,1]
-rsquaredtable[2,2] <- r.squaredGLMM(oblimod1)[1,1]
-rsquaredtable[3,2] <- r.squaredGLMM(ovatmod1)[1,1]
-rsquaredtable[4,2] <- r.squaredGLMM(vimimod1)[1,1]
-
-rsquaredtable %>% kbl(caption = "<b>Supplementary X</b>. Model marginal R squared values for each species modelled separately.", digits = 2) %>%
-  kable_classic(full_width = F, html_font = "Times", font_size = 12)
-
-### R squared of models
-#14-27%
-r.squaredGLMM(amygmod1)
-r.squaredGLMM(amygmod2)
-r.squaredGLMM(oblimod1)
-r.squaredGLMM(oblimod2)
-r.squaredGLMM(ovatmod1)
-r.squaredGLMM(ovatmod2)
-r.squaredGLMM(vimimod1)
-r.squaredGLMM(vimimod2)
 
 ########################
 #### BELOW HERE NEEDS TO BE UPDATED ####
@@ -1437,7 +1029,7 @@ growthAMYGBOF <- growthalldata %>% filter(Site == "BOF", Focal_sp == 'AMYG')
 
 #Plot growth by site
 #First line of code here reorders Sites according to MD values (so from driest to wettest!)
-growthnbhdata %>% mutate(Site = fct_reorder(Site, MD)) %>%
+growthnbhdata %>% mutate(Site = fct_reorder(Site, CMD)) %>%
   ggplot(aes(x = Site, y = growth_rate)) +
   geom_boxplot()+
   geom_jitter(alpha = 0.4, aes(colour = Focal_sp))+

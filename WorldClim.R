@@ -1,68 +1,10 @@
 ###### Visualising WorldClim data for Tasmanian Euc project
 
 #### Load packages and data ####
-
-## This script overrides some of the tidyverse functions
-#possible solution - 
-#reassign the function: select <- dplyr::select
 library(raster)
-#library(rgdal)
-#library(maps)
 library(tidyverse)
 
-######### Temperature globally ####
-#Following this guide:https://www.benjaminbell.co.uk/2018/01/extracting-data-and-making-climate-maps.html
-#Do not currently have the data downloaded
-
-
-# temp1 <- raster("Data/worldclim_v2_temp/wc2.0_30s_tavg_01.tif")
-# temp2 <- raster("Data/worldclim_v2_temp/wc2.0_30s_tavg_02.tif")
-# temp3 <- raster("Data/worldclim_v2_temp/wc2.0_30s_tavg_03.tif")
-# temp4 <- raster("Data/worldclim_v2_temp/wc2.0_30s_tavg_04.tif")
-# temp5 <- raster("Data/worldclim_v2_temp/wc2.0_30s_tavg_05.tif")
-# temp6 <- raster("Data/worldclim_v2_temp/wc2.0_30s_tavg_06.tif")
-# temp7 <- raster("Data/worldclim_v2_temp/wc2.0_30s_tavg_07.tif")
-# temp8 <- raster("Data/worldclim_v2_temp/wc2.0_30s_tavg_08.tif")
-# temp9 <- raster("Data/worldclim_v2_temp/wc2.0_30s_tavg_09.tif")
-# temp10 <- raster("Data/worldclim_v2_temp/wc2.0_30s_tavg_10.tif")
-# temp11 <- raster("Data/worldclim_v2_temp/wc2.0_30s_tavg_11.tif")
-# temp12 <- raster("Data/worldclim_v2_temp/wc2.0_30s_tavg_12.tif")
-
-# Create a data.frame with sample site coordinates
-# site <- c("Manchester", "Liverpool", "Oxford", "London")
-# lon <- c(-2.24, -2.98, -1.25, -0.11)
-# lat <- c(53.47, 53.4, 51.74, 51.49)
-# samples <- data.frame(site, lon, lat, row.names="site")
-
-# Extract data from WorldClim for your sites
-# temp.data <- samples 
-# temp.data$Jan <- raster::extract(temp1, samples)
-# temp.data$Feb <- raster::extract(temp2, samples)
-# temp.data$Mar <- raster::extract(temp3, samples)
-# temp.data$Apr <- raster::extract(temp4, samples)
-# temp.data$May <- raster::extract(temp5, samples)
-# temp.data$Jun <- raster::extract(temp6, samples)
-# temp.data$Jul <- raster::extract(temp7, samples)
-# temp.data$Aug <- raster::extract(temp8, samples)
-# temp.data$Sep <- raster::extract(temp9, samples)
-# temp.data$Oct <- raster::extract(temp10, samples)
-# temp.data$Nov <- raster::extract(temp11, samples)
-# temp.data$Dec <- raster::extract(temp12, samples)
-
-#plotting world maps
-# tempcol <- colorRampPalette(c("purple", "blue", "skyblue", "green", "lightgreen", "yellow", "orange", "red", "darkred"))
-# plot(temp1, col=tempcol(100))
-
-#Plotting for UK only
-# plot(temp1, xlim=c(-12, 4), ylim=c(48, 64), col=tempcol(100))
-#But colouration is weird, so:
-# plot(temp1, xlim=c(-12, 4), ylim=c(48, 64), zlim=c(-10,30), col=tempcol(100))
-
-#Zlim is for temp range
-# plot(temp1, xlim=c(144, 150), ylim=c(-44, -40), zlim=c(-10,30), col=tempcol(100))
-
-###### PPT, PET and MD for Tasmania! #####
-
+###### Extracting PPT, PET and MD for Tasmania! #####
 #et is evapotranspiration
 #ai is aridity index
 #the 12 correspond to months
@@ -174,7 +116,7 @@ tas_md11 <- tas_et11-tas_ppt11
 tas_md12 <- tas_et12-tas_ppt12
 
 ### Annual scale
-#CMD is Climate Moisture Deficient
+#CMD is Climatic Moisture Deficit
 # Pet = Potential Evapotranspiration
 # Ppt = precipitation
 Tas_AIcrop <- crop(aiyr, c(144.5,149.1,-44,-40.6))
@@ -184,14 +126,13 @@ Tas_PET <- crop(etyr, c(144.5,149.1,-44,-40.6))
 Tas_PPT <- Tas_AIreal * Tas_PET
 Tas_CMD <- Tas_PET-Tas_PPT
 
-############ Calculating long-term MD for sites ################
-
-###This is how to extract values from a single location
-rlat <- -41.18608
-rlon <-  148.25668
-ptsCMD <- extract(x=Tas_CMD, y= cbind(rlon, rlat))
-ptsAI <- extract(x=Tas_AIreal, y=cbind(rlon, rlat))
-ptsPPT <- extract(x=Tas_PPT, y=cbind(rlon, rlat))
+############ Calculating annual long-term MD for sites ################
+###This is an example of how to extract values from a single location
+# rlat <- -41.18608
+# rlon <-  148.25668
+# ptsCMD <- extract(x=Tas_CMD, y= cbind(rlon, rlat))
+# ptsAI <- extract(x=Tas_AIreal, y=cbind(rlon, rlat))
+# ptsPPT <- extract(x=Tas_PPT, y=cbind(rlon, rlat))
 
 ### plotting PPT, PET, AI, and CMD in one place
 # par(mfrow=c(2,2), mar=c(.5,.5,2, 5.5))
@@ -212,7 +153,7 @@ ResTas$CMD <- extract(x=Tas_CMD, y= cbind(ResTas$Centred_Long,ResTas$Centred_Lat
 simpleResTas <- ResTas %>% dplyr::select(Site, PPT, PET, CMD)
 
 ### Look at the extracted values
-par(mfrow=c(1,1))
+#par(mfrow=c(1,1))
 #plot(Tas_CMD, main="CMD (PET-PPT)")
 ##Size is based on aridity index!
 #points(Lat~Long, ResTas, pch=16, cex=AI, col='red')
@@ -239,7 +180,7 @@ dates_growth_site <- read_csv("Data/dates_monthly_period_growth.csv")
 
 ## Need to extract site-level climate norm data by month first
 #Centred_Lat and Centred_Long are the coordinates that we want! 
-#This is centred relative to where the actual focal trees are
+#These coordinates are centred (spatially) relative to where the actual focal trees are
 
 #Curious how MD values vary from old coords and new ones:
 ResTasMonthly <- read_csv("Data/site_coords_updated.csv")
@@ -290,7 +231,7 @@ climate_diff$norm_md[climate_diff$Site=="BOF" & climate_diff$Period == 2] <- sum
 
 climate_diff <- climate_diff %>% dplyr::select(Site, Period, norm_md)
 
-### period climate is currently calculated to the day -
+### but period climate is currently calculated to the day -
 #I need to recalculate it at the month scale
 
 #### Calculating MD for period climate at the monthly scale ####
@@ -421,13 +362,13 @@ climate_diff <- climate_diff %>% mutate(monthly_period_md = period_pet_by_month 
 climate_diff <- climate_diff %>% dplyr::select(Site, Period, norm_md, monthly_period_md)
 
 ## Plot them
-ggplot(climate_diff, aes (x = norm_md, y = monthly_period_md, colour = Site))+
-  geom_point(cex=2, alpha =0.8)+
-  theme_classic()
-
-ggplot(climate_diff, aes (x = Site, y = norm_md, colour = Period))+
-geom_point(cex=3, alpha =0.4)+
-  theme_classic()
+# ggplot(climate_diff, aes (x = norm_md, y = monthly_period_md, colour = Site))+
+#   geom_point(cex=2, alpha =0.8)+
+#   theme_classic()
+# 
+# ggplot(climate_diff, aes (x = Site, y = norm_md, colour = Period))+
+# geom_point(cex=3, alpha =0.4)+
+#   theme_classic()
 
 ## Calculate anomaly!
 #Check that these negatives make sense
@@ -439,14 +380,12 @@ climate_diff <- climate_diff %>% mutate(anomaly = monthly_period_md-norm_md)
 #https://math.stackexchange.com/questions/716767/how-to-calculate-the-percentage-of-increase-decrease-with-negative-numbers
 # some useful info
 #Could I write something that says if period value < norm value, add negative sign?
+#Don't need it to be a proportion for the analysis
 
-ggplot(climate_diff, aes (x = Site, y = anomaly, colour = Period))+
-  geom_point(cex=3, alpha =0.4)+
-  theme_classic()
+# ggplot(climate_diff, aes (x = Site, y = anomaly, colour = Period))+
+#   geom_point(cex=3, alpha =0.4)+
+#   theme_classic()
 
-
-
-
-
-
+#Resetting this function
+select <- dplyr::select
 

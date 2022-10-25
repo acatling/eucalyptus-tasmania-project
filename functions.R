@@ -124,3 +124,11 @@ vca_func<-function(mod) {
   groups<-gsub(":", "_", as.data.frame(summary(mod)$varcor)$grp)
   return(data.frame(groups, var_comps))
 }
+
+#From: http://www.sthda.com/english/wiki/wiki.php?id_contents=7930
+get_legend<-function(myggplot){
+  tmp <- ggplot_gtable(ggplot_build(myggplot))
+  leg <- which(sapply(tmp$grobs, function(x) x$name) == "guide-box")
+  legend <- tmp$grobs[[leg]]
+  return(legend)
+}
