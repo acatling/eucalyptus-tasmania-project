@@ -10,22 +10,7 @@ library(sf)
 library(ggrepel)
 library(ggfortify)
 
-#### PCA of soil ####
-summary(soil_pca)
-dev.off()
-pdf("Output/soil-pca.pdf")
-autoplot(soil_pca, label = TRUE, shape = TRUE,
-         loadings = TRUE, loadings.colour = 'slateblue', 
-         loadings.label.repel = TRUE, loadings.label.size = 5,
-         loadings.label = TRUE, loadings.label.colour = 'slateblue')+
-  xlab("PC1 (59.3%)")+
-  ylab("PC2 (15.7%)")+
-  theme_bw()+
-  theme(axis.title.x = element_text(size = 16),
-        axis.title.y = element_text(size = 16),
-        axis.text = element_text(size = 16))
-dev.off()
-
+#### Plots of soil ####
 ## Plotting growth rate responses to PC1 and PC2
 ggplot(growthnbhdata, aes(x = std_PC1, y = sqrt(growth_rate)))+
   geom_point(aes(colour = Period),  alpha = 0.5)+
@@ -538,34 +523,45 @@ dev.off()
 
 #### Growth rate ~ NCI in high or low long-term MD sites ####
 
+# amygmod1 <- lmer(sqrt(growth_rate) ~ std_total_nci + std_norm_md + std_anomaly + 
+#                    std_norm_md:std_total_nci + std_preceding_dbh + std_preceding_dbh:std_total_nci +
+#                    std_preceding_dbh:std_norm_md + std_PC1 + (1|Site/Plot/Tree), amygdata)
+
 ### AMYG
-# oh!! Is the reason why it looks like the lines don't fit the data because I am
-#colouring it by <0 or >0 but modelling it for -1 and 1??
-dev.off()
-pdf("Output/AMYG_growth_rate~NCI+MD.pdf", width=21, height=21)
-par(pty="s")
+## oh!! Is the reason why it looks like the lines don't fit the data because I am
+##colouring it by <0 or >0 but modelling it for -1 and 1??
+# dev.off()
+# pdf("Output/AMYG_growth_rate~NCI+MD.pdf", width=21, height=21)
+# par(pty="s")
+
+#THIS WORKS
 plot(sqrt(growth_rate) ~ std_total_nci, pch = ifelse(Period==1, 19, 17), col = alpha(ifelse(std_norm_md>0, "forestgreen", "red"), 0.4), ylab="sqrt(Growth rate (mm/day))", xlab="Neighbourhood crowding index (standardised, sqrt)", tck=-0.01, cex= 2, cex.lab = 2, cex.axis = 2, amygdata)
-lmer(sqrt(growth_rate) ~ std_total_nci + std_norm_md + std_anomaly + 
-       std_norm_md:std_total_nci + std_preceding_dbh + std_preceding_dbh:std_total_nci +
-       std_preceding_dbh:std_norm_md + std_PC1 + (1|Site/Plot/Tree)
-model<-lmer(sqrt(growth_rate) ~ std_total_nci + std_norm_md + std_period_md + 
-              std_total_nci*std_period_md + DBH_cm + DBH_cm*std_total_nci +
-              DBH_cm*std_period_md + (1|Site/Plot/Tree), amygdata)
+# lmer(sqrt(growth_rate) ~ std_total_nci + std_norm_md + std_anomaly + 
+#        std_norm_md:std_total_nci + std_preceding_dbh + std_preceding_dbh:std_total_nci +
+#        std_preceding_dbh:std_norm_md + std_PC1 + (1|Site/Plot/Tree)
+model<-lmer(sqrt(growth_rate) ~ std_total_nci + std_norm_md + std_anomaly + 
+                     std_norm_md:std_total_nci + std_preceding_dbh + std_preceding_dbh:std_total_nci +
+                     std_preceding_dbh:std_norm_md + std_PC1 + (1|Site/Plot/Tree), amygdata)
 x_to_plot<-seq.func(amygdata$std_total_nci)
-#low md - red
-#preddata <- with(model, data.frame(1, 0, 0, 0, 0, -1, x_to_plot, 0*x_to_plot, 0*0, 0*0, 0*0, -1*x_to_plot))
-preddata <- with(model, data.frame(1, x_to_plot, -1, 0, mean(amygdata$DBH_cm), x_to_plot*0, x_to_plot*mean(amygdata$DBH_cm), 0*mean(amygdata$DBH_cm)))
-plotted.pred <- glmm.predict(mod = model, newdat = preddata, se.mult = 1.96, logit_link=FALSE, log_link=FALSE, glmmTMB=FALSE)
-plot.CI.func(x.for.plot = x_to_plot, pred = plotted.pred$y, upper = plotted.pred$upper, lower = plotted.pred$lower, env.colour = "grey1", env.trans = 50, line.colour = "red", line.weight = 2, line.type = 1)
-#mean md - black
-preddata <- with(model, data.frame(1, x_to_plot, 0, 0, mean(amygdata$DBH_cm), x_to_plot*0, x_to_plot*mean(amygdata$DBH_cm), 0*mean(amygdata$DBH_cm)))
+#mean md - black - works
+preddata <- with(model, data.frame(1, x_to_plot, 0, 0, 0, 0, x_to_plot*0, x_to_plot*0, 0*0))
 plotted.pred <- glmm.predict(mod = model, newdat = preddata, se.mult = 1.96, logit_link=FALSE, log_link=FALSE, glmmTMB=FALSE)
 plot.CI.func(x.for.plot = x_to_plot, pred = plotted.pred$y, upper = plotted.pred$upper, lower = plotted.pred$lower, env.colour = "grey1", env.trans = 50, line.colour = "black", line.weight = 2, line.type = 1)
-#high md - forest green
-preddata <- with(model, data.frame(1, x_to_plot, 1, 0, 0, x_to_plot*0, x_to_plot*0, 0*0))
+#low md - red - works but x extrapolates
+# preddata <- with(model, data.frame(1, x_to_plot, -1, 0, 0, 0, x_to_plot*-1, x_to_plot*0, -1*0))
+# plotted.pred <- glmm.predict(mod = model, newdat = preddata, se.mult = 1.96, logit_link=FALSE, log_link=FALSE, glmmTMB=FALSE)
+# plot.CI.func(x.for.plot = x_to_plot, pred = plotted.pred$y, upper = plotted.pred$upper, lower = plotted.pred$lower, env.colour = "grey1", env.trans = 50, line.colour = "red", line.weight = 2, line.type = 1)
+#low md (wet) - pink - without extrapolating x
+x_to_plot_low<-seq.func(amygdata$std_total_nci[amygdata$norm_md<0])
+preddata <- with(model, data.frame(1, x_to_plot_low, -1, 0, 0, 0, x_to_plot_low*-1, x_to_plot_low*0, -1*0))
 plotted.pred <- glmm.predict(mod = model, newdat = preddata, se.mult = 1.96, logit_link=FALSE, log_link=FALSE, glmmTMB=FALSE)
-plot.CI.func(x.for.plot = x_to_plot, pred = plotted.pred$y, upper = plotted.pred$upper, lower = plotted.pred$lower, env.colour = "grey1", env.trans = 50, line.colour = "forestgreen", line.weight = 2, line.type = 1)
-dev.off()
+plot.CI.func(x.for.plot = x_to_plot_low, pred = plotted.pred$y, upper = plotted.pred$upper, lower = plotted.pred$lower, env.colour = "pink", env.trans = 50, line.colour = "pink", line.weight = 2, line.type = 1)
+#high md (dry) - orange- without extrapolating
+x_to_plot_high<-seq.func(amygdata$std_total_nci[amygdata$norm_md>0])
+preddata <- with(model, data.frame(1, x_to_plot_high, 1, 0, 0, 0, x_to_plot_high*1, x_to_plot_high*0, 1*0))
+plotted.pred <- glmm.predict(mod = model, newdat = preddata, se.mult = 1.96, logit_link=FALSE, log_link=FALSE, glmmTMB=FALSE)
+plot.CI.func(x.for.plot = x_to_plot_high, pred = plotted.pred$y, upper = plotted.pred$upper, lower = plotted.pred$lower, env.colour = "orange", env.trans = 50, line.colour = "orange", line.weight = 2, line.type = 1)
+#dev.off()
 
 ### Growth rate ~ NCI given period climate ####
 #Why aren't lines fitting the data?? Fix this
@@ -595,36 +591,6 @@ dev.off()
 
 ### Do this in a loop for all species
 ## with mean is misleading because extrapolating mean values for all x values
-
-dev.off()
-pdf("Output/panel_growth~NCI+period_md_two_levels.pdf", width=21, height=21)
-par(mfrow=c(2,2))
-par(mar=c(4,6,2,1))
-par(pty="s")
-for(i in 1:length(specieslist)){
-  plotted.data<-as.data.frame(specieslist[i])
-  plot(sqrt(growth_rate) ~ std_total_nci, pch = ifelse(Period==1, 19, 17), col = alpha(ifelse(std_period_md>0, "red", "forestgreen"), 0.4), ylab="sqrt(Growth rate (mm/day))", xlab="Neighbourhood crowding index (standardised, sqrt)", tck=-0.01, cex= 2, cex.lab = 2, cex.axis = 2, plotted.data)
-  mtext(paste(letters[i], ")", sep=""), side=2,line=1,adj=1.5,las=1, padj=-13, cex=1.5)
-  title(main=bquote(italic(.(speciesnamelist[i]))), cex.main=2.5)
-  model<-lmer(sqrt(growth_rate) ~ std_total_nci + std_norm_md + std_period_md + 
-                std_total_nci*std_period_md + std_preceding_dbh + (1|Site/Plot/Tree), plotted.data)
-  x_to_plot_low<-seq.func(plotted.data$std_total_nci[plotted.data$std_period_md<0])
-  #x_to_plot_mean<-seq.func(plotted.data$std_total_nci)
-  x_to_plot_high<-seq.func(plotted.data$std_total_nci[plotted.data$std_period_md>0])
-  #low md - wet - green
-  preddata <- with(model, data.frame(1, x_to_plot_low, 0, -1, 0, x_to_plot_low*-1))
-  plotted.pred <- glmm.predict(mod = model, newdat = preddata, se.mult = 1.96, logit_link=FALSE, log_link=FALSE, glmmTMB=FALSE)
-  plot.CI.func(x.for.plot = x_to_plot_low, pred = plotted.pred$y, upper = plotted.pred$upper, lower = plotted.pred$lower, env.colour = "grey1", env.trans = 50, line.colour = "forestgreen", line.weight = 2, line.type = 1)
-  #mean md - black
-  # preddata <- with(model, data.frame(1, x_to_plot_low, 0, 0, mean(plotted.data$DBH_cm), x_to_plot_low*0, x_to_plot_low*mean(plotted.data$DBH_cm), 0*mean(plotted.data$DBH_cm)))
-  # plotted.pred <- glmm.predict(mod = model, newdat = preddata, se.mult = 1.96, logit_link=FALSE, log_link=FALSE, glmmTMB=FALSE)
-  # plot.CI.func(x.for.plot = x_to_plot_mean, pred = plotted.pred$y, upper = plotted.pred$upper, lower = plotted.pred$lower, env.colour = "grey1", env.trans = 50, line.colour = "black", line.weight = 2, line.type = 1)
-  #high md - dry - red
-  preddata <- with(model, data.frame(1, x_to_plot_high, 0, 1, 0, x_to_plot_high*1))
-  plotted.pred <- glmm.predict(mod = model, newdat = preddata, se.mult = 1.96, logit_link=FALSE, log_link=FALSE, glmmTMB=FALSE)
-  plot.CI.func(x.for.plot = x_to_plot_high, pred = plotted.pred$y, upper = plotted.pred$upper, lower = plotted.pred$lower, env.colour = "grey1", env.trans = 50, line.colour = "red", line.weight = 2, line.type = 1)
-  }
-dev.off()
 
 ## Not sure why OVAT trendlines don't fit the data, all other sp seem fine
 #OVAT
@@ -697,7 +663,8 @@ ggplot(aes(x = std_total_nci, y = sqrt(growth_rate), colour = site_climate))+
   theme_classic()+
   facet_wrap(~Focal_sp)
 
-## Growth rate ~ anomaly
+#### Plot of growth rate ~ anomaly ####
+
 growthnbhdata %>% 
   ggplot(aes(x = anomaly, y = sqrt(growth_rate), colour = site_climate))+
   geom_point(alpha = 0.3)+
