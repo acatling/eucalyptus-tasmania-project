@@ -160,6 +160,7 @@ summary(vimimod1)
 vif(vimimod1)
 #great
 
+
 #### Table of model output ####
 ## Extracting values for all in a loop
 model_list <- list(amygmod1, oblimod1, ovatmod1, vimimod1)
@@ -466,14 +467,7 @@ mtext("NCI (standardised, sqrt)", side=1, outer=T, cex=4, adj=0.93, line=-2)
 mtext("NCI (standardised, sqrt)", side=1, outer=T, cex=4, adj=0.15, line=-2)
 dev.off()
 
-#### Plot panel con- and heterospecific neighbourhood crowding ####
-
-#plot(sqrt(growth_rate) ~ log_p1_intra_nci, xlim=range(c(log_p1_intra_nci,log_p1_inter_nci)), col="red", amygdata)
-#points(sqrt(growth_rate) ~ log_p1_inter_nci, col="green", amygdata)
-
-### Add a legend. Currently holding intra/inter at mean - probably want this
-# to be low since looking at the other. To do***
-## not working yet
+#### Plot panel of growth ~ con and het neighbourhood crowding ####
 
 dev.off()
 pdf("Output/panel_growth~con+het_NCI.pdf", width=21, height=21)
@@ -504,3 +498,85 @@ mtext("NCI (standardised, sqrt)", side=1, outer=T, cex=4, adj=0.93, line=-2)
 mtext("NCI (standardised, sqrt)", side=1, outer=T, cex=4, adj=0.15, line=-2)
 dev.off()
 
+### Plot panel growth ~ focal tree size ####
+
+dev.off()
+pdf("Output/panel_growth~size.pdf", width=21, height=21)
+par(mfrow=c(2,2), mar=c(8, 8, 5, 1))
+for(i in 1:length(specieslist)){
+  plotted.data<-as.data.frame(specieslist[i])
+  plot(sqrt(growth_rate) ~ std_preceding_dbh, pch = 19, col = alpha('grey9', 0.3), ylab="", ylim=c(0,0.52), xlim=c(-2.2,2.9), xlab="",  tck=-0.01, cex=3, cex.axis = 3, padj=0.5, plotted.data)
+  mtext(paste(letters[i], ")", sep=""), side=2, padj=-9,las=1, cex=4)
+  title(main=bquote(italic(.(speciesnamelist[i]))), cex.main=4)
+  model<-lmer(sqrt(growth_rate) ~ std_total_nci + std_norm_md + std_anomaly + 
+                std_norm_md:std_total_nci + std_preceding_dbh + std_preceding_dbh:std_total_nci +
+                std_preceding_dbh:std_norm_md + std_PC1 + (1|Site/Plot/Tree), plotted.data)
+  x_to_plot<-seq.func(plotted.data$std_preceding_dbh)
+  #mean - black
+  preddata <- with(model, data.frame(1, 0, 0, 0,x_to_plot, 0, 0*0, 0*x_to_plot, 0*x_to_plot))
+  plotted.pred <- glmm.predict(mod = model, newdat = preddata, se.mult = 1.96, logit_link=FALSE, log_link=FALSE, glmmTMB=FALSE)
+  plot.CI.func(x.for.plot = x_to_plot, pred = plotted.pred$y, upper = plotted.pred$upper, lower = plotted.pred$lower, env.colour = "grey1", env.trans = 50, line.colour = "black", line.weight = 2, line.type = 1)
+}
+mtext("Growth rate (mm/day, sqrt)", side=2, outer=T, cex=3, adj=0.16, line=-4)
+mtext("Growth rate (mm/day, sqrt)", side=2, outer=T, cex=3, adj=0.9, line=-4)
+mtext("Preceding DBH (standardised)", side=1, outer=T, cex=3, adj=0.9, line=-2)
+mtext("Preceding DBH (standardised)", side=1, outer=T, cex=3, adj=0.2, line=-2)
+dev.off()
+
+### Effect of comp. given size
+dev.off()
+pdf("Output/panel_growth~NCI+size.pdf", width=21, height=21)
+par(mfrow=c(2,2), mar=c(8, 8, 5, 1))
+for(i in 1:length(specieslist)){
+  plotted.data<-as.data.frame(specieslist[i])
+  plot(sqrt(growth_rate) ~ std_total_nci, pch = 19, col = alpha(ifelse(std_preceding_dbh>0, "#CC79A7", "#0072B2"), 0.4), ylab="", ylim=c(0,0.52), xlim=c(-4.3,3), xlab="",  tck=-0.01, cex=3, cex.axis = 3, padj=0.5, plotted.data)
+  mtext(paste(letters[i], ")", sep=""), side=2, padj=-9,las=1, cex=4)
+  title(main=bquote(italic(.(speciesnamelist[i]))), cex.main=4)
+  model<-lmer(sqrt(growth_rate) ~ std_total_nci + std_norm_md + std_anomaly + 
+                std_norm_md:std_total_nci + std_preceding_dbh + std_preceding_dbh:std_total_nci +
+                std_preceding_dbh:std_norm_md + std_PC1 + (1|Site/Plot/Tree), plotted.data)
+  x_to_plot_low<-seq.func(plotted.data$std_total_nci[plotted.data$std_preceding_dbh<0])
+  x_to_plot_high<-seq.func(plotted.data$std_total_nci[plotted.data$std_preceding_dbh>0])
+  #low size - small - blue
+  preddata <- with(model, data.frame(1, x_to_plot_low, 0, 0, -1, 0, x_to_plot_low*0, x_to_plot_low*-1, 0*-1))
+  plotted.pred <- glmm.predict(mod = model, newdat = preddata, se.mult = 1.96, logit_link=FALSE, log_link=FALSE, glmmTMB=FALSE)
+  plot.CI.func(x.for.plot = x_to_plot_low, pred = plotted.pred$y, upper = plotted.pred$upper, lower = plotted.pred$lower, env.colour = "#0072B2", env.trans = 50, line.colour = "#0072B2", line.weight = 2, line.type = 1)
+  #high size - big - pink
+  preddata <- with(model, data.frame(1, x_to_plot_high, 0, 0, 1, 0, x_to_plot_high*0, x_to_plot_high*1, 0*1))
+  plotted.pred <- glmm.predict(mod = model, newdat = preddata, se.mult = 1.96, logit_link=FALSE, log_link=FALSE, glmmTMB=FALSE)
+  plot.CI.func(x.for.plot = x_to_plot_high, pred = plotted.pred$y, upper = plotted.pred$upper, lower = plotted.pred$lower, env.colour = "#CC79A7", env.trans = 50, line.colour = "#CC79A7", line.weight = 2, line.type = 1)
+}
+mtext("Growth rate (mm/day, sqrt)", side=2, outer=T, cex=4, adj=0.12, line=-4)
+mtext("Growth rate (mm/day, sqrt)", side=2, outer=T, cex=4, adj=0.92, line=-4)
+mtext("NCI (standardised, sqrt)", side=1, outer=T, cex=4, adj=0.93, line=-2)
+mtext("NCI (standardised, sqrt)", side=1, outer=T, cex=4, adj=0.15, line=-2)
+dev.off()
+
+#### Effect of size given comp
+dev.off()
+pdf("Output/panel_growth~size+NCI.pdf", width=21, height=21)
+par(mfrow=c(2,2), mar=c(8, 8, 5, 1))
+for(i in 1:length(specieslist)){
+  plotted.data<-as.data.frame(specieslist[i])
+  plot(sqrt(growth_rate) ~ std_preceding_dbh, pch = 19, col = alpha(ifelse(std_total_nci>0, "#CC79A7", "#0072B2"), 0.4), ylab="", ylim=c(0,0.52), xlim=c(-2.2,2.9), xlab="",  tck=-0.01, cex=3, cex.axis = 3, padj=0.5, plotted.data)
+  mtext(paste(letters[i], ")", sep=""), side=2, padj=-9,las=1, cex=4)
+  title(main=bquote(italic(.(speciesnamelist[i]))), cex.main=4)
+  model<-lmer(sqrt(growth_rate) ~ std_total_nci + std_norm_md + std_anomaly + 
+                std_norm_md:std_total_nci + std_preceding_dbh + std_preceding_dbh:std_total_nci +
+                std_preceding_dbh:std_norm_md + std_PC1 + (1|Site/Plot/Tree), plotted.data)
+  x_to_plot_low<-seq.func(plotted.data$std_preceding_dbh[plotted.data$std_total_nci<0])
+  x_to_plot_high<-seq.func(plotted.data$std_preceding_dbh[plotted.data$std_total_nci>0])
+  #low NCI - small - blue
+  preddata <- with(model, data.frame(1, -1, 0, 0,x_to_plot_low, 0, -1*0, -1*x_to_plot_low, 0*x_to_plot_low))
+  plotted.pred <- glmm.predict(mod = model, newdat = preddata, se.mult = 1.96, logit_link=FALSE, log_link=FALSE, glmmTMB=FALSE)
+  plot.CI.func(x.for.plot = x_to_plot_low, pred = plotted.pred$y, upper = plotted.pred$upper, lower = plotted.pred$lower, env.colour = "#0072B2", env.trans = 50, line.colour = "#0072B2", line.weight = 2, line.type = 1)
+  #high NCI - big - pink
+  preddata <- with(model, data.frame(1, 1, 0, 0,x_to_plot_high, 0, 1*0, 1*x_to_plot_high, 0*x_to_plot_low))
+  plotted.pred <- glmm.predict(mod = model, newdat = preddata, se.mult = 1.96, logit_link=FALSE, log_link=FALSE, glmmTMB=FALSE)
+  plot.CI.func(x.for.plot = x_to_plot_high, pred = plotted.pred$y, upper = plotted.pred$upper, lower = plotted.pred$lower, env.colour = "#CC79A7", env.trans = 50, line.colour = "#CC79A7", line.weight = 2, line.type = 1)
+}
+mtext("Growth rate (mm/day, sqrt)", side=2, outer=T, cex=4, adj=0.12, line=-4)
+mtext("Growth rate (mm/day, sqrt)", side=2, outer=T, cex=4, adj=0.92, line=-4)
+mtext("Preceding DBH (standardised)", side=1, outer=T, cex=4, adj=0.98, line=-2)
+mtext("Preceding DBH (standardised)", side=1, outer=T, cex=4, adj=0.11, line=-2)
+dev.off()

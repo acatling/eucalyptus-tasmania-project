@@ -93,12 +93,12 @@ TukeyHSD(modeldbh1)
 
 #Summarising means, range and sd:
 #Initial DBH
-meandbh <- dbhnumeric %>%
+meandbh <- growthnbhdata %>%
   group_by(Focal_sp) %>%
-  summarise(min_dbh = min(DBH_cm),
-            max_dbh = max(DBH_cm),
-            mean_dbh = mean(DBH_cm),
-            sd_dbh = sd(DBH_cm))
+  summarise(min_dbh = min(preceding_dbh, na.rm=T),
+            max_dbh = max(preceding_dbh, na.rm=T),
+            mean_dbh = mean(preceding_dbh, na.rm=T),
+            sd_dbh = sd(preceding_dbh, na.rm=T))
 
 ### For precipitation:
 min(dbhnumeric$PPT)
@@ -501,6 +501,155 @@ for(i in 1:length(specieslist)){
   }
 }
 dev.off()
+
+
+#### Quick test relationships dry vs wet datasets ####
+#AMYG
+amygdata_wet <- amygdata %>% filter(std_norm_md<0)
+amygdata_dry <- amygdata %>% filter(std_norm_md>0)
+
+amygmod_wet <- lmer(sqrt(growth_rate) ~ std_total_nci + std_anomaly + 
+                      std_preceding_dbh + std_preceding_dbh:std_total_nci + 
+                      std_PC1 + (1|Site/Plot/Tree), amygdata_wet)
+amygmodwetdharma <- simulateResiduals(amygmod_wet)
+plot(amygmodwetdharma)
+#great
+summary(amygmod_wet)
+vif(amygmod_wet)
+#dry - not converging
+amygmod_dry <- lmer(sqrt(growth_rate) ~ std_total_nci + std_anomaly + 
+                      std_preceding_dbh + 
+                      std_PC1 + (1|Site/Plot/Tree), amygdata_dry)
+amygmoddrydharma <- simulateResiduals(amygmod_dry)
+plot(amygmoddrydharma)
+#great
+summary(amygmod_dry)
+vif(amygmod_dry)
+
+
+oblidata_wet <- oblidata %>% filter(std_norm_md<0)
+oblidata_dry <- oblidata %>% filter(std_norm_md>0)
+
+oblimod_wet <- lmer(sqrt(growth_rate) ~ std_total_nci + std_anomaly + 
+                      std_preceding_dbh + std_preceding_dbh:std_total_nci + 
+                      std_PC1 + (1|Site/Plot/Tree), oblidata_wet)
+oblimodwetdharma <- simulateResiduals(oblimod_wet)
+plot(oblimodwetdharma)
+#great
+summary(oblimod_wet)
+vif(oblimod_wet)
+
+#dry
+oblimod_dry <- lmer(sqrt(growth_rate) ~ std_total_nci + std_anomaly + 
+                      std_preceding_dbh + std_preceding_dbh:std_total_nci + 
+                      std_PC1 + (1|Site/Plot/Tree), oblidata_dry)
+oblimoddrydharma <- simulateResiduals(oblimod_dry)
+plot(oblimoddrydharma)
+#great
+summary(oblimod_dry)
+vif(oblimod_dry)
+
+
+ovatdata_wet <- ovatdata %>% filter(std_norm_md<0)
+ovatdata_dry <- ovatdata %>% filter(std_norm_md>0)
+
+#grouping problem - only 1 site
+ovatmod_wet <- lmer(sqrt(growth_rate) ~ std_total_nci + std_anomaly + 
+                      std_preceding_dbh + std_preceding_dbh:std_total_nci + 
+                      std_PC1 + (1|Plot/Tree), ovatdata_wet)
+ovatmodwetdharma <- simulateResiduals(ovatmod_wet)
+plot(ovatmodwetdharma)
+#great
+summary(ovatmod_wet)
+vif(ovatmod_wet)
+#dry
+ovatmod_dry <- lmer(sqrt(growth_rate) ~ std_total_nci + std_anomaly + 
+                      std_preceding_dbh + std_preceding_dbh:std_total_nci + 
+                      std_PC1 + (1|Site/Plot/Tree), ovatdata_dry)
+ovatmoddrydharma <- simulateResiduals(ovatmod_dry)
+plot(ovatmoddrydharma)
+#great
+summary(ovatmod_dry)
+vif(ovatmod_dry)
+
+
+vimidata_wet <- vimidata %>% filter(std_norm_md<0)
+vimidata_dry <- vimidata %>% filter(std_norm_md>0)
+
+
+vimimod_wet <- lmer(sqrt(growth_rate) ~ std_total_nci + std_anomaly + 
+                      std_preceding_dbh + std_preceding_dbh:std_total_nci + 
+                      std_PC1 + (1|Site/Plot/Tree), vimidata_wet)
+vimimodwetdharma <- simulateResiduals(vimimod_wet)
+plot(vimimodwetdharma)
+#great
+summary(vimimod_wet)
+vif(vimimod_wet)
+#dry - not converging
+vimimod_dry <- lmer(sqrt(growth_rate) ~ std_total_nci + std_anomaly + 
+                      std_preceding_dbh + 
+                      std_PC1 + (1|Site/Plot/Tree), vimidata_dry)
+vimimoddrydharma <- simulateResiduals(vimimod_dry)
+plot(vimimoddrydharma)
+#great
+summary(vimimod_dry)
+vif(vimimod_dry)
+
+#### Quick test relationships big vs small trees ####
+oblidata_small <- oblidata %>% filter(std_preceding_dbh<0)
+oblidata_big <- oblidata %>% filter(std_preceding_dbh>0)
+
+oblimod_small <- lmer(sqrt(growth_rate) ~ std_total_nci + std_norm_md + std_anomaly + 
+                        std_norm_md:std_total_nci + std_PC1 + (1|Site/Plot/Tree), oblidata_small)
+oblimodsmalldharma <- simulateResiduals(oblimod_small)
+plot(oblimodsmalldharma)
+#great
+summary(oblimod_small)
+vif(oblimod_small)
+
+#big
+oblimod_big <- lmer(sqrt(growth_rate) ~ std_total_nci + std_norm_md + std_anomaly + 
+                      std_norm_md:std_total_nci + std_PC1 + (1|Site/Plot/Tree), oblidata_big)
+oblimodbigdharma <- simulateResiduals(oblimod_big)
+plot(oblimodbigdharma)
+#great
+summary(oblimod_big)
+vif(oblimod_big)
+
+vimidata_small <- vimidata %>% filter(std_preceding_dbh<0)
+vimidata_big <- vimidata %>% filter(std_preceding_dbh>0)
+
+vimimod_small <- lmer(sqrt(growth_rate) ~ std_total_nci + std_norm_md + std_anomaly + 
+                        std_norm_md:std_total_nci + std_PC1 + (1|Site/Plot/Tree), vimidata_small)
+vimimodsmalldharma <- simulateResiduals(vimimod_small)
+plot(vimimodsmalldharma)
+#great
+summary(vimimod_small)
+vif(vimimod_small)
+
+#big
+vimimod_big <- lmer(sqrt(growth_rate) ~ std_total_nci + std_norm_md + std_anomaly + 
+                      std_norm_md:std_total_nci + std_PC1 + (1|Site/Plot/Tree), vimidata_big)
+vimimodbigdharma <- simulateResiduals(vimimod_big)
+plot(vimimodbigdharma)
+#great
+summary(vimimod_big)
+vif(vimimod_big)
+
+### What about growth ~ size given high or low NCI?
+#Size matters only when std_total_nci < 0.
+oblidata_bign <- oblidata %>% filter(std_total_nci<0)
+
+oblimod_bign <- lmer(sqrt(growth_rate) ~ std_preceding_dbh + std_norm_md + std_anomaly + 
+                        std_PC1 + std_preceding_dbh:std_norm_md + (1|Site/Plot/Tree), oblidata_bign)
+oblimodbigdharma <- simulateResiduals(oblimod_bign)
+plot(oblimodbigdharma)
+#great
+summary(oblimod_bign)
+vif(oblimod_small)
+
+model<-lmer(sqrt(growth_rate) ~ std_preceding_dbh + std_norm_md + std_anomaly + 
+              std_preceding_dbh + std_PC1 + std_preceding_dbh:std_norm_md + std_PC1 + (1|Site/Plot/Tree), plotted.data)
 
 
 ###############
