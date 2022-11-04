@@ -105,6 +105,15 @@ min(dbhnumeric$PPT)
 max(dbhnumeric$PPT)
 mean(dbhnumeric$PPT)
 sd(dbhnumeric$PPT)
+
+## Summarising means and sds of cons and hets
+test <- growthnbhdata %>%
+  group_by(Focal_sp) %>%
+  summarise(mean_log_p1_inter_nci = mean(log_p1_inter_nci, na.rm=T),
+            sd_log_p1_inter_nci = sd(log_p1_inter_nci, na.rm=T),
+            mean_log_p1_intra_nci = mean(log_p1_intra_nci, na.rm=T),
+            sd_log_p1_intra_nci = sd(log_p1_intra_nci, na.rm=T))
+
 #### Does initial DBH predict growth rate? ####
 #shape = Period
 ggplot(growthnbhdata, aes(x = sqrt(DBH_cm), y = sqrt(growth_rate)))+
@@ -651,6 +660,72 @@ vif(oblimod_small)
 model<-lmer(sqrt(growth_rate) ~ std_preceding_dbh + std_norm_md + std_anomaly + 
               std_preceding_dbh + std_PC1 + std_preceding_dbh:std_norm_md + std_PC1 + (1|Site/Plot/Tree), plotted.data)
 
+
+#### Quick test relationships het and con dry vs wet ####
+### Heterospecific 
+#AMYG
+amygdata_wet <- amygdata %>% filter(std_norm_md<0)
+amygdata_dry <- amygdata %>% filter(std_norm_md>0)
+
+amygmod_wet <- lmer(sqrt(growth_rate) ~ std_intra_nci + std_inter_nci + std_anomaly +  
+                      std_preceding_dbh + std_PC1 + (1|Site/Plot/Tree), amygdata_wet)
+amygmodwetdharma <- simulateResiduals(amygmod_wet)
+plot(amygmodwetdharma)
+summary(amygmod_wet)
+#dry
+amygmod_dry <- lmer(sqrt(growth_rate) ~ std_intra_nci + std_inter_nci + std_anomaly +  
+                      std_preceding_dbh + std_PC1 + (1|Site/Plot/Tree), amygdata_dry)
+amygmoddrydharma <- simulateResiduals(amygmod_dry)
+plot(amygmoddrydharma)
+summary(amygmod_dry)
+
+##OBLI
+oblidata_wet <- oblidata %>% filter(std_norm_md<0)
+oblidata_dry <- oblidata %>% filter(std_norm_md>0)
+
+oblimod_wet <- lmer(sqrt(growth_rate) ~ std_intra_nci + std_inter_nci + std_anomaly +  
+                      std_preceding_dbh + std_PC1 + (1|Site/Plot/Tree), oblidata_wet)
+oblimodwetdharma <- simulateResiduals(oblimod_wet)
+plot(oblimodwetdharma)
+summary(oblimod_wet)
+#dry
+oblimod_dry <- lmer(sqrt(growth_rate) ~ std_intra_nci + std_inter_nci + std_anomaly +  
+                      std_preceding_dbh + std_PC1 + (1|Site/Plot/Tree), oblidata_dry)
+oblimoddrydharma <- simulateResiduals(oblimod_dry)
+plot(oblimoddrydharma)
+summary(oblimod_dry)
+
+##OVAT
+ovatdata_wet <- ovatdata %>% filter(std_norm_md<0)
+ovatdata_dry <- ovatdata %>% filter(std_norm_md>0)
+
+ovatmod_wet <- lmer(sqrt(growth_rate) ~ std_intra_nci + std_inter_nci + std_anomaly +  
+                      std_preceding_dbh + std_PC1 + (1|Plot/Tree), ovatdata_wet)
+ovatmodwetdharma <- simulateResiduals(ovatmod_wet)
+plot(ovatmodwetdharma)
+summary(ovatmod_wet)
+#dry
+ovatmod_dry <- lmer(sqrt(growth_rate) ~ std_intra_nci + std_inter_nci + std_anomaly +  
+                      std_preceding_dbh + std_PC1 + (1|Plot/Tree), ovatdata_dry)
+ovatmoddrydharma <- simulateResiduals(ovatmod_dry)
+plot(ovatmoddrydharma)
+summary(ovatmod_dry)
+
+##VIMI
+vimidata_wet <- vimidata %>% filter(std_norm_md<0)
+vimidata_dry <- vimidata %>% filter(std_norm_md>0)
+
+vimimod_wet <- lmer(sqrt(growth_rate) ~ std_intra_nci + std_inter_nci + std_anomaly +  
+                      std_preceding_dbh + std_PC1 + (1|Site/Plot/Tree), vimidata_wet)
+vimimodwetdharma <- simulateResiduals(vimimod_wet)
+plot(vimimodwetdharma)
+summary(vimimod_wet)
+#dry
+vimimod_dry <- lmer(sqrt(growth_rate) ~ std_intra_nci + std_inter_nci + std_anomaly +  
+                      std_preceding_dbh + std_PC1 + (1|Site/Plot/Tree), vimidata_dry)
+vimimoddrydharma <- simulateResiduals(vimimod_dry)
+plot(vimimoddrydharma)
+summary(vimimod_dry)
 
 ###############
 ### Below plots aren't updated for final model ####

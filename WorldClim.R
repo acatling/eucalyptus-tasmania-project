@@ -389,3 +389,28 @@ climate_diff <- climate_diff %>% mutate(anomaly = monthly_period_md-norm_md)
 #Resetting this function
 select <- dplyr::select
 
+#### Testing minimum temperatures across Tas ####
+# data downloaded from WorldClim 1970-2000 climate averages
+
+temp1 <- raster("Data/WorldClim_Tmin_10mins/wc2.1_10m_tmin_01.tif")
+temp2 <- raster("Data/WorldClim_Tmin_10mins/wc2.1_10m_tmin_02.tif")
+temp3 <- raster("Data/WorldClim_Tmin_10mins/wc2.1_10m_tmin_03.tif")
+temp4 <- raster("Data/WorldClim_Tmin_10mins/wc2.1_10m_tmin_04.tif")
+temp5 <- raster("Data/WorldClim_Tmin_10mins/wc2.1_10m_tmin_05.tif")
+temp6 <- raster("Data/WorldClim_Tmin_10mins/wc2.1_10m_tmin_06.tif")
+temp7 <- raster("Data/WorldClim_Tmin_10mins/wc2.1_10m_tmin_07.tif")
+temp8 <- raster("Data/WorldClim_Tmin_10mins/wc2.1_10m_tmin_08.tif")
+temp9 <- raster("Data/WorldClim_Tmin_10mins/wc2.1_10m_tmin_09.tif")
+temp10 <- raster("Data/WorldClim_Tmin_10mins/wc2.1_10m_tmin_10.tif")
+temp11 <- raster("Data/WorldClim_Tmin_10mins/wc2.1_10m_tmin_11.tif")
+temp12 <- raster("Data/WorldClim_Tmin_10mins/wc2.1_10m_tmin_12.tif")
+
+#Year
+#BIO6 shows the long-term average annual Min Temperature of the coldest month
+tempyr <- raster("Data/WorldClim_Bio/wc2.1_10m_bio_6.tif")
+plot(tempyr, xlim=c(144, 150), ylim=c(-44, -40))
+
+## Extract values for my sites
+# import Tasmanian reserve lat long (in decimal degrees) ###
+ResTas <- read_csv("Data/site_coords_updated.csv")
+ResTas$Tmin <- raster::extract(x=tempyr, y= cbind(ResTas$Centred_Long,ResTas$Centred_Lat))

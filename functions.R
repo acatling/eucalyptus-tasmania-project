@@ -21,6 +21,12 @@ my_theme <- theme(axis.title.x = element_text(size = 16),
                   legend.text = element_text(size = 14),
                   legend.title = element_blank())
 
+### For plotting legends in multi-panel base R loop plots
+reset <- function() {
+  par(mfrow=c(1, 1), oma=rep(0, 4), mar=rep(0, 4), new=TRUE)
+  plot(0:1, 0:1, type="n", xlab="", ylab="", axes=FALSE)
+}
+
 ###function to predict linear curves only
 lm.predict<-function(mod, newdat){ 
   pred = predict(mod, newdata = newdat, interval = "confidence", level = 0.95)

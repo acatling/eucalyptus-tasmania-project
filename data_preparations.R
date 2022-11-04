@@ -11,7 +11,7 @@ library(lmerTest)
 library(emmeans)
 library(DHARMa)
 library(car)
-select <- dplyr::select
+select <- dplyr::selectf
 
 #Read in functions
 source("functions.R")
@@ -958,49 +958,36 @@ growthnbhdata <- growthnbhdata %>% mutate(log_p1_intra_nci = log(intra_nci+1))
 growthnbhdata <- growthnbhdata %>% mutate(log_p1_inter_nci = log(inter_nci+1))
 
 ## Standardising continuous predictors to a mean of 0 and SD of 1
-### Need to group by species before standardising (since I will be analysing in species-species manner)
+#I want global standardised means and SDs across species for plot and model comparisions
 
 #Scaling NCI
-growthnbhdata <- growthnbhdata %>% group_by(Focal_sp) %>% 
-    mutate(std_total_nci = scale(log_total_nci, center = TRUE, scale = TRUE)[,1])
-growthnbhdata <- growthnbhdata %>% group_by(Focal_sp) %>% 
-  mutate(std_intra_nci = scale(log_p1_intra_nci, center = TRUE, scale = TRUE)[,1])
-growthnbhdata <- growthnbhdata %>% group_by(Focal_sp) %>% 
-  mutate(std_inter_nci = scale(log_p1_inter_nci, center = TRUE, scale = TRUE)[,1])
+growthnbhdata <- growthnbhdata %>% mutate(std_total_nci = scale(log_total_nci, center = TRUE, scale = TRUE)[,1])
+#Scaling intra and inter NCI by the mean and sd of total NCI
+#to compare on the same scales when plotting (between each other and relative to total NCI)
+growthnbhdata <- growthnbhdata %>% mutate(std_intra_nci = (log_p1_intra_nci-mean(log_total_nci))/sd(log_total_nci))
+growthnbhdata <- growthnbhdata %>% mutate(std_inter_nci = (log_p1_inter_nci-mean(log_total_nci))/sd(log_total_nci))
 
 #Scaling initial DBH / preceding dbh
 #Happy that it is normally distributed!
-growthnbhdata <- growthnbhdata %>% group_by(Focal_sp) %>% 
-  mutate(std_preceding_dbh = scale(preceding_dbh, center = TRUE, scale = TRUE)[,1])
+growthnbhdata <- growthnbhdata %>% mutate(std_preceding_dbh = scale(preceding_dbh, center = TRUE, scale = TRUE)[,1])
 
 #Scaling long-term climate
-growthnbhdata <- growthnbhdata %>% group_by(Focal_sp) %>% 
-    mutate(std_ppt = scale(PPT, center = TRUE, scale = TRUE)[,1])
-growthnbhdata <- growthnbhdata %>% group_by(Focal_sp) %>% 
-     mutate(std_cmd = scale(CMD, center = TRUE, scale = TRUE)[,1])
-growthnbhdata <- growthnbhdata %>% group_by(Focal_sp) %>% 
-     mutate(std_daily_md = scale(daily_annual_cmd, center = TRUE, scale = TRUE)[,1])
-growthnbhdata <- growthnbhdata %>% group_by(Focal_sp) %>% 
-      mutate(std_norm_md = scale(norm_md, center = TRUE, scale = TRUE)[,1])
+growthnbhdata <- growthnbhdata %>% mutate(std_ppt = scale(PPT, center = TRUE, scale = TRUE)[,1])
+growthnbhdata <- growthnbhdata %>% mutate(std_cmd = scale(CMD, center = TRUE, scale = TRUE)[,1])
+growthnbhdata <- growthnbhdata %>% mutate(std_daily_md = scale(daily_annual_cmd, center = TRUE, scale = TRUE)[,1])
+growthnbhdata <- growthnbhdata %>% mutate(std_norm_md = scale(norm_md, center = TRUE, scale = TRUE)[,1])
 
 #Scaling period rainfall
 growthnbhdata$period_rainfall <- as.numeric(growthnbhdata$period_rainfall)
-growthnbhdata <- growthnbhdata %>% group_by(Focal_sp) %>% 
-      mutate(std_period_ppt = scale(period_rainfall, center = TRUE, scale = TRUE)[,1])
-growthnbhdata <- growthnbhdata %>% group_by(Focal_sp) %>% 
-        mutate(std_period_md = scale(period_md, center = TRUE, scale = TRUE)[,1])
-growthnbhdata <- growthnbhdata %>% group_by(Focal_sp) %>% 
-       mutate(std_daily_period_md = scale(daily_period_md, center = TRUE, scale = TRUE)[,1])
-growthnbhdata <- growthnbhdata %>% group_by(Focal_sp) %>% 
-        mutate(std_monthly_period_md = scale(monthly_period_md, center = TRUE, scale = TRUE)[,1])
-growthnbhdata <- growthnbhdata %>% group_by(Focal_sp) %>% 
-       mutate(std_anomaly = scale(anomaly, center = TRUE, scale = TRUE)[,1])
+growthnbhdata <- growthnbhdata %>% mutate(std_period_ppt = scale(period_rainfall, center = TRUE, scale = TRUE)[,1])
+growthnbhdata <- growthnbhdata %>% mutate(std_period_md = scale(period_md, center = TRUE, scale = TRUE)[,1])
+growthnbhdata <- growthnbhdata %>% mutate(std_daily_period_md = scale(daily_period_md, center = TRUE, scale = TRUE)[,1])
+growthnbhdata <- growthnbhdata %>% mutate(std_monthly_period_md = scale(monthly_period_md, center = TRUE, scale = TRUE)[,1])
+growthnbhdata <- growthnbhdata %>% mutate(std_anomaly = scale(anomaly, center = TRUE, scale = TRUE)[,1])
 
 #Scaling PC1 and PC2
-growthnbhdata <- growthnbhdata %>% group_by(Focal_sp) %>% 
-  mutate(std_PC1 = scale(PC1, center = TRUE, scale = TRUE)[,1])
-growthnbhdata <- growthnbhdata %>% group_by(Focal_sp) %>% 
-  mutate(std_PC2 = scale(PC2, center = TRUE, scale = TRUE)[,1])
+growthnbhdata <- growthnbhdata %>% mutate(std_PC1 = scale(PC1, center = TRUE, scale = TRUE)[,1])
+growthnbhdata <- growthnbhdata %>% mutate(std_PC2 = scale(PC2, center = TRUE, scale = TRUE)[,1])
 
 #### Add categorical information for whether sites are wet or dry
 growthnbhdata$site_climate <- growthnbhdata$Site
@@ -1017,9 +1004,8 @@ ovatdata <- growthnbhdata %>% filter(Focal_sp == 'OVAT')
 vimidata <- growthnbhdata %>% filter(Focal_sp == 'VIMI')
 
 #vimi has two NAs for growth which is causing problems for plotting, so removing them
-vimidata <- vimidata %>% filter(!(is.na(DBH_cm)))
+#vimidata <- vimidata %>% filter(!(is.na(DBH_cm)))
 
 specieslist <- list(amygdata, oblidata, ovatdata, vimidata)
-speciesnamelist <- c("Eucalyptus amygdalina", "Eucalyptus obliqua", "Eucalyptus ovata", "Eucalyptus viminalis")
+speciesnamelist <- c("E. amygdalina", "E. obliqua", "E. ovata", "E. viminalis")
 speciesabbrevlist <- c("AMYG", "OBLI", "OVAT", "VIMI")
-
