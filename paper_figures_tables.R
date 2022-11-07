@@ -149,6 +149,8 @@ plot(ovatmod1)
 ### 
 qqp(ranef(ovatmod1)$`Plot:Site`[,1])
 
+### How correlated are MD anomaly and long-term mean MD? Only two sites really
+
 ### VIMI ####
 vimimod1 <- lmer(sqrt(growth_rate) ~ std_total_nci + std_norm_md + std_anomaly + 
                    std_norm_md:std_total_nci + std_preceding_dbh + std_preceding_dbh:std_total_nci + 
@@ -217,7 +219,7 @@ growth_effects_kbl %>% mutate(Effect = c("Intercept", "Total NCI", "Mean MD", "M
   kable_classic(full_width = T, html_font = "Times", font_size = 12) %>%
   kable_styling(font_size = 14) %>%
   row_spec(0, italic = T) %>%
-  footnote(general = "Continuous predictors are scaled to a mean of 0, representing 308.8 mm deficit per growth period for mean MD", general_title="")
+  footnote(general = "Continuous predictors are scaled to a mean of 0. Mean MD is 308.8 mm per growth period. Mean MD anomaly is -336.6 mm per growth period. Mean preceding DBH is 368.2 mm.", general_title="")
 #Can have multiple footnotes with c(1, 2)
 #### Table of r squared values from models ####
 rsquaredtable <- matrix(ncol=2, nrow = 4)
@@ -756,13 +758,12 @@ mtext("Preceding DBH (standardised)", side=1, outer=T, cex=4, adj=0.98, line=-2)
 mtext("Preceding DBH (standardised)", side=1, outer=T, cex=4, adj=0.11, line=-2)
 dev.off()
 #### Panel plot of growth ~ het crowding given MD ####
-
 dev.off()
 pdf("Output/panel_growth~het_NCI+norm_MD.pdf", width=21, height=21)
-par(mfrow=c(2,2), mar=c(8, 8, 5, 1))
+par(oma=c(8,4,3,1), mfrow=c(2,2), mar=c(7, 6, 4, 1))
 for(i in 1:length(specieslist)){
   plotted.data<-as.data.frame(specieslist[i])
-  plot(sqrt(growth_rate) ~ std_inter_nci, pch = 19, col = alpha(ifelse(std_period_md>0, "#CC79A7", "#0072B2"), 0.4), ylab="", ylim=c(0,0.52), xlim=c(-3.5,2.5), xlab="",  tck=-0.01, cex=3, cex.axis = 3, padj=0.5, plotted.data)
+  plot(sqrt(growth_rate) ~ std_inter_nci, pch = 19, col = alpha(ifelse(std_period_md>0, "#CC79A7", "#0072B2"), 0.4), ylab="", ylim=c(0,0.52), xlim=c(-6,2.5), xlab="",  tck=-0.01, cex=3, cex.axis = 3, padj=0.5, plotted.data)
   mtext(paste(letters[i], ")", sep=""), side=2, padj=-9,las=1, cex=4)
   title(main=bquote(italic(.(speciesnamelist[i]))), cex.main=4)
   model<-lmer(sqrt(growth_rate) ~ std_intra_nci + std_inter_nci + std_norm_md + 
@@ -773,25 +774,29 @@ for(i in 1:length(specieslist)){
   #low md - wet - blue
   preddata <- with(model, data.frame(1, 0, x_to_plot_low, -1, 0, 0, 0, 0*-1, x_to_plot_low*-1))
   plotted.pred <- glmm.predict(mod = model, newdat = preddata, se.mult = 1.96, logit_link=FALSE, log_link=FALSE, glmmTMB=FALSE)
-  plot.CI.func(x.for.plot = x_to_plot_low, pred = plotted.pred$y, upper = plotted.pred$upper, lower = plotted.pred$lower, env.colour = "#0072B2", env.trans = 50, line.colour = "#0072B2", line.weight = 2, line.type = 1)
+  plot.CI.func(x.for.plot = x_to_plot_low, pred = plotted.pred$y, upper = plotted.pred$upper, lower = plotted.pred$lower, env.colour = "#0072B2", env.trans = 50, line.colour = "#0072B2", line.weight = 2)
   #high md - dry - pink
   preddata <- with(model, data.frame(1, 0, x_to_plot_high, 1, 0, 0, 0, 0*1, x_to_plot_high*1))
   plotted.pred <- glmm.predict(mod = model, newdat = preddata, se.mult = 1.96, logit_link=FALSE, log_link=FALSE, glmmTMB=FALSE)
-  plot.CI.func(x.for.plot = x_to_plot_high, pred = plotted.pred$y, upper = plotted.pred$upper, lower = plotted.pred$lower, env.colour = "#CC79A7", env.trans = 50, line.colour = "#CC79A7", line.weight = 2, line.type = 1)
+  plot.CI.func(x.for.plot = x_to_plot_high, pred = plotted.pred$y, upper = plotted.pred$upper, lower = plotted.pred$lower, env.colour = "#CC79A7", env.trans = 50, line.colour = "#CC79A7", line.weight = 2)
 }
-mtext("Growth rate (mm/day, sqrt)", side=2, outer=T, cex=4, adj=0.12, line=-4)
-mtext("Growth rate (mm/day, sqrt)", side=2, outer=T, cex=4, adj=0.92, line=-4)
-mtext("Het. NCI (standardised, log+1)", side=1, outer=T, cex=4, adj=0.98, line=-2)
-mtext("Het. NCI (standardised, log+1)", side=1, outer=T, cex=4, adj=0.11, line=-2)
+mtext("Growth rate (mm/day, sqrt)", side=2, outer=T, cex=3.8, adj=0.12, line=-2)
+mtext("Growth rate (mm/day, sqrt)", side=2, outer=T, cex=3.8, adj=0.94, line=-2)
+mtext("Het. NCI (standardised, log+1)", side=1, outer=T, cex=3.8, adj=0.93, line=-1.9)
+mtext("Het. NCI (standardised, log+1)", side=1, outer=T, cex=3.8, adj=0.15, line=-1.9)
+reset()
+legend("bottom", title=NULL, horiz=T, legend=c("Low mean MD", "High mean MD"),
+       col=c("#0072B2", "#CC79A7"), pch=19, cex=4, bty="n")
 dev.off()
+
 #### Panel plot of growth ~ con crowding given MD ####
 
 dev.off()
 pdf("Output/panel_growth~con_NCI+norm_MD.pdf", width=21, height=21)
-par(mfrow=c(2,2), mar=c(8, 8, 5, 1))
+par(oma=c(8,4,3,1), mfrow=c(2,2), mar=c(7, 6, 4, 1))
 for(i in 1:length(specieslist)){
   plotted.data<-as.data.frame(specieslist[i])
-  plot(sqrt(growth_rate) ~ std_intra_nci, pch = 19, col = alpha(ifelse(std_period_md>0, "#CC79A7", "#0072B2"), 0.4), ylab="", ylim=c(0,0.52), xlim=c(-3.5,2.8), xlab="",  tck=-0.01, cex=3, cex.axis = 3, padj=0.5, plotted.data)
+  plot(sqrt(growth_rate) ~ std_intra_nci, pch = 19, col = alpha(ifelse(std_period_md>0, "#CC79A7", "#0072B2"), 0.4), ylab="", ylim=c(0,0.52), xlim=c(-6,2.5), xlab="",  tck=-0.01, cex=3, cex.axis = 3, padj=0.5, plotted.data)
   mtext(paste(letters[i], ")", sep=""), side=2, padj=-9,las=1, cex=4)
   title(main=bquote(italic(.(speciesnamelist[i]))), cex.main=4)
   model<-lmer(sqrt(growth_rate) ~ std_intra_nci + std_inter_nci + std_norm_md + 
@@ -802,18 +807,20 @@ for(i in 1:length(specieslist)){
   #low md - wet - blue
   preddata <- with(model, data.frame(1, x_to_plot_low, 0, -1, 0, 0, 0, x_to_plot_low*-1, 0*-1))
   plotted.pred <- glmm.predict(mod = model, newdat = preddata, se.mult = 1.96, logit_link=FALSE, log_link=FALSE, glmmTMB=FALSE)
-  plot.CI.func(x.for.plot = x_to_plot_low, pred = plotted.pred$y, upper = plotted.pred$upper, lower = plotted.pred$lower, env.colour = "#0072B2", env.trans = 50, line.colour = "#0072B2", line.weight = 2, line.type = 1)
+  plot.CI.func(x.for.plot = x_to_plot_low, pred = plotted.pred$y, upper = plotted.pred$upper, lower = plotted.pred$lower, env.colour = "#0072B2", env.trans = 50, line.colour = "#0072B2", line.weight = 2)
   #high md - dry - pink
   preddata <- with(model, data.frame(1, x_to_plot_high, 0, 1, 0, 0, 0, x_to_plot_high*1, 0*1))
   plotted.pred <- glmm.predict(mod = model, newdat = preddata, se.mult = 1.96, logit_link=FALSE, log_link=FALSE, glmmTMB=FALSE)
-  plot.CI.func(x.for.plot = x_to_plot_high, pred = plotted.pred$y, upper = plotted.pred$upper, lower = plotted.pred$lower, env.colour = "#CC79A7", env.trans = 50, line.colour = "#CC79A7", line.weight = 2, line.type = 1)
+  plot.CI.func(x.for.plot = x_to_plot_high, pred = plotted.pred$y, upper = plotted.pred$upper, lower = plotted.pred$lower, env.colour = "#CC79A7", env.trans = 50, line.colour = "#CC79A7", line.weight = 2)
 }
-mtext("Growth rate (mm/day, sqrt)", side=2, outer=T, cex=4, adj=0.12, line=-4)
-mtext("Growth rate (mm/day, sqrt)", side=2, outer=T, cex=4, adj=0.92, line=-4)
-mtext("Con. NCI (standardised, log+1)", side=1, outer=T, cex=4, adj=0.98, line=-2)
-mtext("Con. NCI (standardised, log+1)", side=1, outer=T, cex=4, adj=0.11, line=-2)
+mtext("Growth rate (mm/day, sqrt)", side=2, outer=T, cex=3.8, adj=0.12, line=-2)
+mtext("Growth rate (mm/day, sqrt)", side=2, outer=T, cex=3.8, adj=0.94, line=-2)
+mtext("Con. NCI (standardised, log+1)", side=1, outer=T, cex=3.8, adj=0.93, line=-1.9)
+mtext("Con. NCI (standardised, log+1)", side=1, outer=T, cex=3.8, adj=0.15, line=-1.9)
+reset()
+legend("bottom", title=NULL, horiz=T, legend=c("Low mean MD", "High mean MD"),
+       col=c("#0072B2", "#CC79A7"), pch=19, cex=4, bty="n")
 dev.off()
-
 
 #### Predictive plots of growth ~ wet and dry ####
 #Standard size (mean), standard NCI, standard PC1
@@ -994,7 +1001,7 @@ ggplot(pred_dbh_all, aes(x = Focal_sp, y = y, colour=dbh_category))+
         axis.text.x = element_text(face = "italic"))
 max(ovatdata$growth_rate)
 
-#### Plotting predicitive plots all together ####
+#### Plotting predictive plots all together ####
 #pred_md_all, pred_nci_all, pred_dbh_all
 #md/nci/dbh_category
 #growth_rate is just 'y'
