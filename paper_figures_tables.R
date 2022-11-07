@@ -477,6 +477,105 @@ legend("bottom", title=NULL, horiz=T, legend=c("Low mean MD", "High mean MD"),
        col=c("#0072B2", "#CC79A7"), pch=19, cex=4, bty="n")
 dev.off()
 
+### Back-transformed axes
+dev.off()
+pdf("Output/panel_growth~NCI+norm2.pdf", width=21, height=21)
+par(oma=c(8,4,3,1), mfrow=c(2,2), mar=c(7, 6, 4, 1))
+for(i in 1:length(specieslist)){
+  plotted.data<-as.data.frame(specieslist[i])
+  plot(growth_rate ~ std_total_nci, pch = 19, col = alpha(ifelse(std_period_md>0, "#CC79A7", "#0072B2"), 0.4), ylab="", ylim=c(0,0.52), xlim=c(-4,2.5), xlab="",  tck=-0.01, cex=3, cex.axis = 3, padj=0.5, plotted.data)
+  mtext(paste(letters[i], ")", sep=""), side=2, padj=-8.5,las=1, cex=4)
+  title(main=bquote(italic(.(speciesnamelist[i]))), line=2, cex.main=4)
+  model<-lmer(sqrt(growth_rate) ~ std_total_nci + std_norm_md + std_anomaly + 
+                std_norm_md:std_total_nci + std_preceding_dbh + std_preceding_dbh:std_total_nci +
+                std_preceding_dbh:std_norm_md + std_PC1 + (1|Site/Plot/Tree), plotted.data)
+  x_to_plot_low<-seq.func(plotted.data$std_total_nci[plotted.data$std_period_md<0])
+  #x_to_plot_mean<-seq.func(plotted.data$std_total_nci)
+  x_to_plot_high<-seq.func(plotted.data$std_total_nci[plotted.data$std_period_md>0])
+  #low md - wet - blue
+  preddata <- with(model, data.frame(1, x_to_plot_low, -1, 0, 0, 0, x_to_plot_low*-1, x_to_plot_low*0, -1*0))
+  plotted.pred <- glmm.predict(mod = model, newdat = preddata, se.mult = 1.96, logit_link=FALSE, log_link=FALSE, glmmTMB=FALSE)^2
+  plot.CI.func(x.for.plot = x_to_plot_low, pred = plotted.pred$y, upper = plotted.pred$upper, lower = plotted.pred$lower, env.colour = "#0072B2", env.trans = 50, line.colour = "#0072B2", line.weight = 2, line.type = 1)
+  #high md - dry - pink
+  preddata <- with(model, data.frame(1, x_to_plot_high, 1, 0, 0, 0, x_to_plot_high*1, x_to_plot_high*0, 1*0))
+  plotted.pred <- glmm.predict(mod = model, newdat = preddata, se.mult = 1.96, logit_link=FALSE, log_link=FALSE, glmmTMB=FALSE)^2
+  plot.CI.func(x.for.plot = x_to_plot_high, pred = plotted.pred$y, upper = plotted.pred$upper, lower = plotted.pred$lower, env.colour = "#CC79A7", env.trans = 50, line.colour = "#CC79A7", line.weight = 2, line.type = 1)
+}
+mtext("Growth rate (mm/day)", side=2, outer=T, cex=3.8, adj=0.12, line=-2)
+mtext("Growth rate (mm/day)", side=2, outer=T, cex=3.8, adj=0.94, line=-2)
+mtext("NCI (standardised, log)", side=1, outer=T, cex=3.8, adj=0.93, line=-1.9)
+mtext("NCI (standardised, log)", side=1, outer=T, cex=3.8, adj=0.15, line=-1.9)
+reset()
+legend("bottom", title=NULL, horiz=T, legend=c("Low mean MD", "High mean MD"),
+       col=c("#0072B2", "#CC79A7"), pch=19, cex=4, bty="n")
+dev.off()
+
+### Simplifying glmm.predict, back-transformed
+dev.off()
+pdf("Output/panel_growth~NCI+norm3.pdf", width=21, height=21)
+par(oma=c(8,4,3,1), mfrow=c(2,2), mar=c(7, 6, 4, 1))
+for(i in 1:length(specieslist)){
+  plotted.data<-as.data.frame(specieslist[i])
+  plot(growth_rate ~ std_total_nci, pch = 19, col = alpha(ifelse(std_period_md>0, "#CC79A7", "#0072B2"), 0.4), ylab="", ylim=c(0,0.26), xlim=c(-4,2.5), xlab="",  tck=-0.01, cex=3, cex.axis = 3, padj=0.5, plotted.data)
+  mtext(paste(letters[i], ")", sep=""), side=2, padj=-8.5,las=1, cex=4)
+  title(main=bquote(italic(.(speciesnamelist[i]))), line=2, cex.main=4)
+  model<-lmer(sqrt(growth_rate) ~ std_total_nci + std_norm_md + std_anomaly + 
+                std_norm_md:std_total_nci + std_preceding_dbh + std_preceding_dbh:std_total_nci +
+                std_preceding_dbh:std_norm_md + std_PC1 + (1|Site/Plot/Tree), plotted.data)
+  x_to_plot_low<-seq.func(plotted.data$std_total_nci[plotted.data$std_period_md<0])
+  #x_to_plot_mean<-seq.func(plotted.data$std_total_nci)
+  x_to_plot_high<-seq.func(plotted.data$std_total_nci[plotted.data$std_period_md>0])
+  #low md - wet - blue
+  plotted.pred <- glmm.predict(mod = model, newdat = data.frame(1, x_to_plot_low, -1, 0, 0, 0, x_to_plot_low*-1, x_to_plot_low*0, -1*0), se.mult = 1.96, logit_link=FALSE, log_link=FALSE, glmmTMB=FALSE)^2
+  plot.CI.func(x.for.plot = x_to_plot_low, pred = plotted.pred$y, upper = plotted.pred$upper, lower = plotted.pred$lower, env.colour = "#0072B2", env.trans = 50, line.colour = "#0072B2", line.weight = 2, line.type = 1)
+  #high md - dry - pink
+  plotted.pred <- glmm.predict(mod = model, newdat = data.frame(1, x_to_plot_high, 1, 0, 0, 0, x_to_plot_high*1, x_to_plot_high*0, 1*0), se.mult = 1.96, logit_link=FALSE, log_link=FALSE, glmmTMB=FALSE)^2
+  plot.CI.func(x.for.plot = x_to_plot_high, pred = plotted.pred$y, upper = plotted.pred$upper, lower = plotted.pred$lower, env.colour = "#CC79A7", env.trans = 50, line.colour = "#CC79A7", line.weight = 2, line.type = 1)
+}
+mtext("Growth rate (mm/day)", side=2, outer=T, cex=3.8, adj=0.12, line=-2)
+mtext("Growth rate (mm/day)", side=2, outer=T, cex=3.8, adj=0.94, line=-2)
+mtext("NCI (standardised, log)", side=1, outer=T, cex=3.8, adj=0.93, line=-1.9)
+mtext("NCI (standardised, log)", side=1, outer=T, cex=3.8, adj=0.15, line=-1.9)
+reset()
+legend("bottom", title=NULL, horiz=T, legend=c("Low mean MD", "High mean MD"),
+       col=c("#0072B2", "#CC79A7"), pch=19, cex=4, bty="n")
+dev.off()
+
+### Troubleshooting why ovata model predictions don't quite intersect the data
+#ovatdata
+plot(growth_rate ~ std_total_nci, pch = 19, col = alpha(ifelse(std_period_md>0, "#CC79A7", "#0072B2"), 0.4), 
+     ylab="", ylim=c(0,0.26), xlim=c(-4,2.5), xlab="",  tck=-0.01, cex=3, cex.axis = 3, padj=0.5, ovatdata)
+model<-lmer(sqrt(growth_rate) ~ std_total_nci + std_norm_md +
+              std_norm_md:std_total_nci + std_preceding_dbh + std_preceding_dbh:std_total_nci +
+              std_preceding_dbh:std_norm_md + std_PC1 + (1|Site/Plot/Tree), ovatdata)
+x_to_plot_high<-seq.func(ovatdata$std_total_nci[ovatdata$std_period_md>0])
+plotted.pred <- glmm.predict(mod = model, newdat = data.frame(1, x_to_plot_high, 1, 0, 0, x_to_plot_high*1, x_to_plot_high*0, 1*0), se.mult = 1.96, logit_link=FALSE, log_link=FALSE, glmmTMB=FALSE)^2
+plot.CI.func(x.for.plot = x_to_plot_high, pred = plotted.pred$y, upper = plotted.pred$upper, lower = plotted.pred$lower, env.colour = "#CC79A7", env.trans = 50, line.colour = "#CC79A7", line.weight = 2, line.type = 1)
+x_to_plot_low<-seq.func(ovatdata$std_total_nci[ovatdata$std_period_md<0])
+plotted.pred <- glmm.predict(mod = model, newdat = data.frame(1, x_to_plot_high, -1, 0, 0, x_to_plot_high*-1, x_to_plot_high*0, -1*0), se.mult = 1.96, logit_link=FALSE, log_link=FALSE, glmmTMB=FALSE)^2
+plot.CI.func(x.for.plot = x_to_plot_low, pred = plotted.pred$y, upper = plotted.pred$upper, lower = plotted.pred$lower, env.colour = "#0072B2", env.trans = 50, line.colour = "#0072B2", line.weight = 2, line.type = 1)
+
+mean(growthnbhdata$preceding_dbh, na.rm=T)
+mean(ovatdata$preceding_dbh, na.rm=T)
+mean(growthnbhdata$PC1, na.rm=T)
+mean(ovatdata$PC1, na.rm=T)
+mean(growthnbhdata$total_nci, na.rm=T)
+mean(ovatdata$total_nci, na.rm=T)
+mean(growthnbhdata$std_anomaly, na.rm=T)
+mean(ovatdata$std_anomaly, na.rm=T)
+
+##It's the intercept that is much lower than others? No...
+mean(ovatdata$growth_rate)
+mean(amygdata$growth_rate, na.rm=T)
+mean(oblidata$growth_rate, na.rm=T)
+mean(vimidata$growth_rate)
+
+##Multicollinearity? Yes, some between MD anomaly and norm_md because only 3 sites
+ggplot(ovatdata, aes(x= std_anomaly, y=std_norm_md))+
+  geom_point(aes(colour = Site))+
+  geom_smooth(method="lm")+
+  theme_classic()
+
 #### Panel plot of growth ~ MD given low and high NCI ####
 dev.off()
 pdf("Output/panel_growth~MD+NCI.pdf", width=21, height=21)
@@ -716,5 +815,232 @@ mtext("Con. NCI (standardised, log+1)", side=1, outer=T, cex=4, adj=0.11, line=-
 dev.off()
 
 
-#### lmerPredict plots of growth ~ wet and dry ####
-#Standard size (mean) 
+#### Predictive plots of growth ~ wet and dry ####
+#Standard size (mean), standard NCI, standard PC1
+#Wet will be 1 sd above long-term MD mean, dry will be 1 sd below
+
+#amyg
+model<-lmer(sqrt(growth_rate) ~ std_total_nci + std_norm_md + std_anomaly + 
+              std_norm_md:std_total_nci + std_preceding_dbh + std_preceding_dbh:std_total_nci +
+              std_preceding_dbh:std_norm_md + std_PC1 + (1|Site/Plot/Tree), amygdata)
+## you can make multiple predictions at once - here I made the predictions for md =1 and md=-1
+amyg_md_pred<-glmm.predict(mod=model, newdat=data.frame(1, 0, c(1,-1), 0, 0, 0, 0*c(1,-1), 0*0, c(1,-1)*0), 
+                                     se.mult=1.96, logit_link=FALSE, log_link=FALSE, glmmTMB=FALSE)^2
+## add the md category (like you did)
+amyg_md_pred$md_category<-c("dry", "wet")
+#add species name
+amyg_md_pred$Focal_sp <- 'E. amygdalina'
+
+
+#obli
+model<-lmer(sqrt(growth_rate) ~ std_total_nci + std_norm_md + std_anomaly + 
+              std_norm_md:std_total_nci + std_preceding_dbh + std_preceding_dbh:std_total_nci +
+              std_preceding_dbh:std_norm_md + std_PC1 + (1|Site/Plot/Tree), oblidata)
+obli_md_pred<-glmm.predict(mod=model, newdat=data.frame(1, 0, c(1,-1), 0, 0, 0, 0*c(1,-1), 0*0, c(1,-1)*0), 
+                           se.mult=1.96, logit_link=FALSE, log_link=FALSE, glmmTMB=FALSE)^2
+obli_md_pred$md_category<-c("dry", "wet")
+obli_md_pred$Focal_sp <- 'E. obliqua'
+
+#ovat
+model<-lmer(sqrt(growth_rate) ~ std_total_nci + std_norm_md + std_anomaly +
+              std_norm_md:std_total_nci + std_preceding_dbh + std_preceding_dbh:std_total_nci +
+              std_preceding_dbh:std_norm_md + std_PC1 + (1|Site/Plot/Tree), ovatdata)
+ovat_md_pred<-glmm.predict(mod=model, newdat=data.frame(1, 0, c(1,-1), 0, 0, 0, 0*c(1,-1), 0*0, c(1,-1)*0), 
+                           se.mult=1.96, logit_link=FALSE, log_link=FALSE, glmmTMB=FALSE)^2
+ovat_md_pred$md_category<-c("dry", "wet")
+ovat_md_pred$Focal_sp <- 'E. ovata'
+
+#vimi
+model<-lmer(sqrt(growth_rate) ~ std_total_nci + std_norm_md + std_anomaly + 
+              std_norm_md:std_total_nci + std_preceding_dbh + std_preceding_dbh:std_total_nci +
+              std_preceding_dbh:std_norm_md + std_PC1 + (1|Site/Plot/Tree), vimidata)
+vimi_md_pred<-glmm.predict(mod=model, newdat=data.frame(1, 0, c(1,-1), 0, 0, 0, 0*c(1,-1), 0*0, c(1,-1)*0), 
+                           se.mult=1.96, logit_link=FALSE, log_link=FALSE, glmmTMB=FALSE)^2
+vimi_md_pred$md_category<-c("dry", "wet")
+vimi_md_pred$Focal_sp <- 'E. viminalis'
+
+#Merge them all
+pred_md_all <- rbind(amyg_md_pred, obli_md_pred, ovat_md_pred, vimi_md_pred)
+
+## Plot them
+ggplot(pred_md_all, aes(x = Focal_sp, y = y, colour=md_category))+
+  geom_point(position = position_dodge(0.8), cex=2.5)+
+  geom_errorbar(aes(ymin = lower, ymax = upper, width = 0.3), position = position_dodge(0.8), cex=1)+
+  ylab("Growth rate (mm/day)")+
+  xlab("Species")+
+  theme_classic()+
+  my_theme+
+  theme(axis.ticks.x = element_blank(),
+  axis.text.x = element_text(face = "italic"))
+
+ # theme(axis.text.x = element_blank(), axis.ticks.x = element_blank())
+#mean(amygdata$growth_rate[amygdata$std_preceding_dbh>0], na.rm=T)
+
+#### Predictive plots of growth ~ high and low NCI ####
+#Standard size (mean), standard long-term MD, standard PC1, standard MD anomaly
+#High NCI will be 1 sd above total NCI mean, dry will be 1 sd below
+
+#amyg
+model<-lmer(sqrt(growth_rate) ~ std_total_nci + std_norm_md + std_anomaly + 
+              std_norm_md:std_total_nci + std_preceding_dbh + std_preceding_dbh:std_total_nci +
+              std_preceding_dbh:std_norm_md + std_PC1 + (1|Site/Plot/Tree), amygdata)
+## you can make multiple predictions at once - here I made the predictions for md =1 and md=-1
+amyg_pred_nci<-glmm.predict(mod=model, newdat=data.frame(1, c(1,-1), 0, 0, 0, 0, c(1,-1)*0, c(1,-1)*0, 0*0), 
+                               se.mult=1.96, logit_link=FALSE, log_link=FALSE, glmmTMB=FALSE)^2
+## add the md category (like you did)
+amyg_pred_nci$nci_category<-c("high NCI", "low NCI")
+#add species name
+amyg_pred_nci$Focal_sp <- 'E. amygdalina'
+
+
+#obli
+model<-lmer(sqrt(growth_rate) ~ std_total_nci + std_norm_md + std_anomaly + 
+              std_norm_md:std_total_nci + std_preceding_dbh + std_preceding_dbh:std_total_nci +
+              std_preceding_dbh:std_norm_md + std_PC1 + (1|Site/Plot/Tree), oblidata)
+obli_pred_nci<-glmm.predict(mod=model, newdat=data.frame(1, c(1,-1), 0, 0, 0, 0, c(1,-1)*0, c(1,-1)*0, 0*0), 
+                               se.mult=1.96, logit_link=FALSE, log_link=FALSE, glmmTMB=FALSE)^2
+obli_pred_nci$nci_category<-c("high NCI", "low NCI")
+obli_pred_nci$Focal_sp <- 'E. obliqua'
+
+#ovat
+model<-lmer(sqrt(growth_rate) ~ std_total_nci + std_norm_md + std_anomaly +
+              std_norm_md:std_total_nci + std_preceding_dbh + std_preceding_dbh:std_total_nci +
+              std_preceding_dbh:std_norm_md + std_PC1 + (1|Site/Plot/Tree), ovatdata)
+ovat_pred_nci<-glmm.predict(mod=model, newdat=data.frame(1, c(1,-1), 0, 0, 0, 0, c(1,-1)*0, c(1,-1)*0, 0*0), 
+                               se.mult=1.96, logit_link=FALSE, log_link=FALSE, glmmTMB=FALSE)^2
+ovat_pred_nci$nci_category<-c("high NCI", "low NCI")
+ovat_pred_nci$Focal_sp <- 'E. ovata'
+
+#vimi
+model<-lmer(sqrt(growth_rate) ~ std_total_nci + std_norm_md + std_anomaly + 
+              std_norm_md:std_total_nci + std_preceding_dbh + std_preceding_dbh:std_total_nci +
+              std_preceding_dbh:std_norm_md + std_PC1 + (1|Site/Plot/Tree), vimidata)
+vimi_pred_nci<-glmm.predict(mod=model, newdat=data.frame(1, c(1,-1), 0, 0, 0, 0, c(1,-1)*0, c(1,-1)*0, 0*0), 
+                               se.mult=1.96, logit_link=FALSE, log_link=FALSE, glmmTMB=FALSE)^2
+vimi_pred_nci$nci_category<-c("high NCI", "low NCI")
+vimi_pred_nci$Focal_sp <- 'E. viminalis'
+
+#Merge them all
+pred_nci_all <- rbind(amyg_pred_nci, obli_pred_nci, ovat_pred_nci, vimi_pred_nci)
+
+## Plot them
+ggplot(pred_nci_all, aes(x = Focal_sp, y = y, colour=nci_category))+
+  geom_point(position = position_dodge(0.8), cex=2.5)+
+  geom_errorbar(aes(ymin = lower, ymax = upper, width = 0.3), position = position_dodge(0.8), cex=1)+
+  ylab("Growth rate (mm/day)")+
+  xlab("Species")+
+  theme_classic()+
+  my_theme+
+  theme(axis.ticks.x = element_blank(),
+        axis.text.x = element_text(face = "italic"))
+max(ovatdata$growth_rate)
+
+#### Predictive plots of growth ~ small and large size ####
+#Standard long-term MD, standard PC1, standard NCI, standard MD anomaly
+#High size will be 1 sd above preceding dbh mean, small will be 1 sd below
+
+#amyg
+model<-lmer(sqrt(growth_rate) ~ std_total_nci + std_norm_md + std_anomaly + 
+              std_norm_md:std_total_nci + std_preceding_dbh + std_preceding_dbh:std_total_nci +
+              std_preceding_dbh:std_norm_md + std_PC1 + (1|Site/Plot/Tree), amygdata)
+## you can make multiple predictions at once - here I made the predictions for md =1 and md=-1
+amyg_pred_dbh<-glmm.predict(mod=model, newdat=data.frame(1, 0, 0, 0, c(1,-1), 0, 0*0, 0*c(1,-1), 0*c(1,-1)), 
+                            se.mult=1.96, logit_link=FALSE, log_link=FALSE, glmmTMB=FALSE)^2
+## add the md category (like you did)
+amyg_pred_dbh$dbh_category<-c("big", "small")
+#add species name
+amyg_pred_dbh$Focal_sp <- 'E. amygdalina'
+
+
+#obli
+model<-lmer(sqrt(growth_rate) ~ std_total_nci + std_norm_md + std_anomaly + 
+              std_norm_md:std_total_nci + std_preceding_dbh + std_preceding_dbh:std_total_nci +
+              std_preceding_dbh:std_norm_md + std_PC1 + (1|Site/Plot/Tree), oblidata)
+obli_pred_dbh<-glmm.predict(mod=model, newdat=data.frame(1, 0, 0, 0, c(1,-1), 0, 0*0, 0*c(1,-1), 0*c(1,-1)), 
+                            se.mult=1.96, logit_link=FALSE, log_link=FALSE, glmmTMB=FALSE)^2
+obli_pred_dbh$dbh_category<-c("big", "small")
+obli_pred_dbh$Focal_sp <- 'E. obliqua'
+
+#ovat
+model<-lmer(sqrt(growth_rate) ~ std_total_nci + std_norm_md + std_anomaly +
+              std_norm_md:std_total_nci + std_preceding_dbh + std_preceding_dbh:std_total_nci +
+              std_preceding_dbh:std_norm_md + std_PC1 + (1|Site/Plot/Tree), ovatdata)
+ovat_pred_dbh<-glmm.predict(mod=model, newdat=data.frame(1, 0, 0, 0, c(1,-1), 0, 0*0, 0*c(1,-1), 0*c(1,-1)), 
+                            se.mult=1.96, logit_link=FALSE, log_link=FALSE, glmmTMB=FALSE)^2
+ovat_pred_dbh$dbh_category<-c("big", "small")
+ovat_pred_dbh$Focal_sp <- 'E. ovata'
+
+#vimi
+model<-lmer(sqrt(growth_rate) ~ std_total_nci + std_norm_md + std_anomaly + 
+              std_norm_md:std_total_nci + std_preceding_dbh + std_preceding_dbh:std_total_nci +
+              std_preceding_dbh:std_norm_md + std_PC1 + (1|Site/Plot/Tree), vimidata)
+vimi_pred_dbh<-glmm.predict(mod=model, newdat=data.frame(1, 0, 0, 0, c(1,-1), 0, 0*0, 0*c(1,-1), 0*c(1,-1)), 
+                            se.mult=1.96, logit_link=FALSE, log_link=FALSE, glmmTMB=FALSE)^2
+vimi_pred_dbh$dbh_category<-c("big", "small")
+vimi_pred_dbh$Focal_sp <- 'E. viminalis'
+
+#Merge them all
+pred_dbh_all <- rbind(amyg_pred_dbh, obli_pred_dbh, ovat_pred_dbh, vimi_pred_dbh)
+
+## Plot them
+ggplot(pred_dbh_all, aes(x = Focal_sp, y = y, colour=dbh_category))+
+  geom_point(position = position_dodge(0.8), cex=2.5)+
+  geom_errorbar(aes(ymin = lower, ymax = upper, width = 0.3), position = position_dodge(0.8), cex=1)+
+  ylab("Growth rate (mm/day)")+
+  xlab("Species")+
+  theme_classic()+
+  my_theme+
+  theme(axis.ticks.x = element_blank(),
+        axis.text.x = element_text(face = "italic"))
+max(ovatdata$growth_rate)
+
+#### Plotting predicitive plots all together ####
+#pred_md_all, pred_nci_all, pred_dbh_all
+#md/nci/dbh_category
+#growth_rate is just 'y'
+
+###Using base R so I need to assign dummy x values to distribute along x axis
+pred_md_all$x <- c(0.5, 1, 2, 2.5, 3.5, 4, 5, 5.5)
+pred_nci_all$x <- c(0.5, 1, 2, 2.5, 3.5, 4, 5, 5.5)
+pred_dbh_all$x <- c(0.5, 1, 2, 2.5, 3.5, 4, 5, 5.5)
+
+#md_plot <-
+dev.off()
+pdf("Output/panel_predicted_growth.pdf", width=21, height=21)
+par(oma=c(12,8,3,1), mfrow=c(3,1), mar=c(1, 4, 4, 1))
+#MD plot
+plot(y ~ x, pch = ifelse(pred_md_all$md_category == 'wet', 19, 15), ylab="", ylim=c(0,0.13), xlab="", 
+     tck=-0.01, cex=6, cex.axis = 5, xaxt="n", bty="l", pred_md_all)
+#Add error bars
+arrows(x0=pred_md_all$x, y0=pred_md_all$lower, x1=pred_md_all$x, y1=pred_md_all$upper, code=3, angle=90, length=0.1, lwd=5)
+legend("topright", title= expression(bold('Long-term MD')), horiz=F, legend=c("Low (wet)", "High (dry)"),
+       pch=c(19, 15), cex=4, bty="n")
+mtext(expression(bold("A)")), side=1, cex=3.8, adj=0.005, padj=-8.1, line=-2)
+#NCI plot
+plot(y ~ x, pch = ifelse(pred_nci_all$nci_category == 'low NCI', 19, 15), ylab="", ylim=c(0,0.13), xlab="", 
+     tck=-0.01, cex=6, cex.axis = 5, xaxt="n", bty="l", pred_nci_all)
+#Add error bars
+arrows(x0=pred_nci_all$x, y0=pred_nci_all$lower, x1=pred_nci_all$x, y1=pred_nci_all$upper, code=3, angle=90, length=0.1, lwd=5)
+legend("topright", title= expression(bold('Total NCI')), horiz=F, legend=c("Low (sparse)", "High (dense)"),
+       pch=c(19, 15), cex=4, bty="n")
+mtext(expression(bold("B)")), side=1, cex=3.8, adj=0.005, padj= -8.1, line=-2)
+#DBH plot
+plot(y ~ x, pch = ifelse(pred_dbh_all$dbh_category == 'small', 19, 15), ylab="", ylim=c(0,0.13), xlab="", 
+     tck=-0.01, cex=6, cex.axis = 5, xaxt="n", bty="l", pred_dbh_all)
+#Add error bars
+arrows(x0=pred_dbh_all$x, y0=pred_dbh_all$lower, x1=pred_dbh_all$x, y1=pred_dbh_all$upper, code=3, angle=90, length=0.1, lwd=5)
+legend("topright", title= expression(bold('Preceding DBH')), horiz=F, legend=c("Low (small)", "High (big)"),
+       pch=c(19, 15), cex=4, bty="n")
+mtext(expression(bold("C)")), side=1, cex=3.8, adj=0.005, padj= -8.1, line=-2)
+mtext("Growth rate (mm/day)", side=2, outer=T, cex=3.8, line=4)
+mtext("Focal species", side=1, outer=T, cex=3.8, line=10)
+mtext(expression(italic("E. amygdalina")), side=1, outer=T, cex=3.8, adj=0.03, line=4)
+mtext(expression(italic("E. obliqua")), side=1, outer=T, cex=3.8, adj=0.35, line=4)
+mtext(expression(italic("E. ovata")), side=1, outer=T, cex=3.8, adj=0.65, line=3)
+mtext(expression(italic("E. viminalis")), side=1, outer=T, cex=3.8, adj=0.99, line=3)
+dev.off()
+
+#box(lwd=2)
+#If code = 3 a head is drawn at both ends of the arrow
+
+

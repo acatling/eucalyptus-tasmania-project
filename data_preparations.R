@@ -11,7 +11,7 @@ library(lmerTest)
 library(emmeans)
 library(DHARMa)
 library(car)
-select <- dplyr::selectf
+select <- dplyr::select
 
 #Read in functions
 source("functions.R")
@@ -1009,3 +1009,6 @@ vimidata <- growthnbhdata %>% filter(Focal_sp == 'VIMI')
 specieslist <- list(amygdata, oblidata, ovatdata, vimidata)
 speciesnamelist <- c("E. amygdalina", "E. obliqua", "E. ovata", "E. viminalis")
 speciesabbrevlist <- c("AMYG", "OBLI", "OVAT", "VIMI")
+
+## Save dataframe as csv
+#write_csv(growthnbhdata, "Output/tas_data.csv")
