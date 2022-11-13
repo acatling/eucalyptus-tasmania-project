@@ -163,6 +163,93 @@ vif(vimimod1)
 #great
 
 
+### New models - long-term MD and anamolous MD ####
+#### MD ####
+amygmod_md <- lmer(sqrt(growth_rate) ~ std_total_nci + std_norm_md + 
+                     std_norm_md:std_total_nci + std_preceding_dbh + std_preceding_dbh:std_total_nci +
+                     std_preceding_dbh:std_norm_md + std_PC1 + (1|Site/Plot/Tree), amygdata)
+amygmodmddharma <- simulateResiduals(amygmod_md)
+plot(amygmodmddharma)
+#terrible residuals, ks test signif
+summary(amygmod_md)
+vif(amygmod_md)
+#great
+plot(amygmod_md)
+
+oblimod_md <- lmer(sqrt(growth_rate) ~ std_total_nci + std_norm_md + 
+                     std_norm_md:std_total_nci + std_preceding_dbh + std_preceding_dbh:std_total_nci +
+                     std_preceding_dbh:std_norm_md + std_PC1 + (1|Site/Plot/Tree), oblidata)
+oblimodmddharma <- simulateResiduals(oblimod_md)
+plot(oblimodmddharma)
+#great
+summary(oblimod_md)
+vif(oblimod_md)
+
+ovatmod_md <- lmer(sqrt(growth_rate) ~ std_total_nci + std_norm_md + 
+                     std_norm_md:std_total_nci + std_preceding_dbh + std_preceding_dbh:std_total_nci +
+                     std_preceding_dbh:std_norm_md + std_PC1 + (1|Site/Plot/Tree), ovatdata)
+ovatmodmddharma <- simulateResiduals(ovatmod_md)
+plot(ovatmodmddharma)
+summary(ovatmod_md)
+vif(ovatmod_md)
+
+vimimod_md <- lmer(sqrt(growth_rate) ~ std_total_nci + std_norm_md + 
+                     std_norm_md:std_total_nci + std_preceding_dbh + std_preceding_dbh:std_total_nci +
+                     std_preceding_dbh:std_norm_md + std_PC1 + (1|Site/Plot/Tree), vimidata)
+vimimodmddharma <- simulateResiduals(vimimod_md)
+plot(vimimodmddharma)
+summary(vimimod_md)
+vif(vimimod_md)
+
+#### Anomaly ####
+amygmod_an <- lmer(sqrt(growth_rate) ~ std_total_nci + std_anomaly + 
+                     std_anomaly:std_total_nci + std_preceding_dbh + std_preceding_dbh:std_total_nci +
+                     std_preceding_dbh:std_anomaly + std_PC1 + (1|Site/Plot/Tree), amygdata)
+amygmodandharma <- simulateResiduals(amygmod_an)
+plot(amygmodandharma)
+#terrible residuals
+summary(amygmod_an)
+vif(amygmod_an)
+#great
+plot(amygmod_an)
+
+oblimod_an <- lmer(sqrt(growth_rate) ~ std_total_nci + std_anomaly + 
+                     std_anomaly:std_total_nci + std_preceding_dbh + std_preceding_dbh:std_total_nci +
+                     std_preceding_dbh:std_anomaly + std_PC1 + (1|Site/Plot/Tree), oblidata)
+oblimodandharma <- simulateResiduals(oblimod_an)
+plot(oblimodandharma)
+#great
+summary(oblimod_an)
+vif(oblimod_an)
+#great
+
+ovatmod_an <- lmer(sqrt(growth_rate) ~ std_total_nci + std_anomaly + 
+                     std_anomaly:std_total_nci + std_preceding_dbh + std_preceding_dbh:std_total_nci +
+                     std_preceding_dbh:std_anomaly + std_PC1 + (1|Site/Plot/Tree), ovatdata)
+ovatmodandharma <- simulateResiduals(ovatmod_an)
+plot(ovatmodandharma)
+summary(ovatmod_an)
+vif(ovatmod_an)
+#great
+
+vimimod_an <- lmer(sqrt(growth_rate) ~ std_total_nci + std_anomaly + 
+                     std_anomaly:std_total_nci + std_preceding_dbh + std_preceding_dbh:std_total_nci +
+                     std_preceding_dbh:std_anomaly + std_PC1 + (1|Site/Plot/Tree), vimidata)
+vimimodandharma <- simulateResiduals(vimimod_an)
+plot(vimimodandharma)
+summary(vimimod_an)
+vif(vimimod_an)
+
+### Plotting amyg ~ md anomaly
+#Not sure why this is the better fit...
+ggplot(amygdata, aes(x= std_PC1, y = growth_rate))+
+  geom_jitter(alpha=0.4)+
+  geom_smooth(method="lm")+
+  theme_classic()
+
+test <- lmer(sqrt(growth_rate) ~ std_anomaly + I(std_anomaly^2) + (1|Site/Plot/Tree), amygdata)
+summary(test)
+
 #### Table of model output ####
 ## Extracting values for all in a loop
 model_list <- list(amygmod1, oblimod1, ovatmod1, vimimod1)
@@ -822,7 +909,7 @@ legend("bottom", title=NULL, horiz=T, legend=c("Low mean MD", "High mean MD"),
        col=c("#0072B2", "#CC79A7"), pch=19, cex=4, bty="n")
 dev.off()
 
-#### Predictive plots of growth ~ wet and dry ####
+#### Predictive plots of growth ~ long-term MD wet and dry - old models with anomaly ####
 #Standard size (mean), standard NCI, standard PC1
 #Wet will be 1 sd above long-term MD mean, dry will be 1 sd below
 
@@ -882,6 +969,64 @@ ggplot(pred_md_all, aes(x = Focal_sp, y = y, colour=md_category))+
 
  # theme(axis.text.x = element_blank(), axis.ticks.x = element_blank())
 #mean(amygdata$growth_rate[amygdata$std_preceding_dbh>0], na.rm=T)
+
+#### Predictive plots of growth ~ long-term MD wet and dry - new models no anomaly ####
+#Standard size (mean), standard NCI, standard PC1
+#Wet will be 1 sd above long-term MD mean, dry will be 1 sd below
+
+#amyg
+model<-lmer(sqrt(growth_rate) ~ std_total_nci + std_norm_md +
+              std_norm_md:std_total_nci + std_preceding_dbh + std_preceding_dbh:std_total_nci +
+              std_preceding_dbh:std_norm_md + std_PC1 + (1|Site/Plot/Tree), amygdata)
+## you can make multiple predictions at once - here I made the predictions for md =1 and md=-1
+amyg_md_pred<-glmm.predict(mod=model, newdat=data.frame(1, 0, c(1,-1), 0, 0, 0*c(1,-1), 0*0, c(1,-1)*0), 
+                           se.mult=1.96, logit_link=FALSE, log_link=FALSE, glmmTMB=FALSE)^2
+## add the md category (like you did)
+amyg_md_pred$md_category<-c("dry", "wet")
+#add species name
+amyg_md_pred$Focal_sp <- 'E. amygdalina'
+
+
+#obli
+model<-lmer(sqrt(growth_rate) ~ std_total_nci + std_norm_md +
+              std_norm_md:std_total_nci + std_preceding_dbh + std_preceding_dbh:std_total_nci +
+              std_preceding_dbh:std_norm_md + std_PC1 + (1|Site/Plot/Tree), oblidata)
+obli_md_pred<-glmm.predict(mod=model, newdat=data.frame(1, 0, c(1,-1), 0, 0, 0*c(1,-1), 0*0, c(1,-1)*0), 
+                           se.mult=1.96, logit_link=FALSE, log_link=FALSE, glmmTMB=FALSE)^2
+obli_md_pred$md_category<-c("dry", "wet")
+obli_md_pred$Focal_sp <- 'E. obliqua'
+
+#ovat
+model<-lmer(sqrt(growth_rate) ~ std_total_nci + std_norm_md +
+              std_norm_md:std_total_nci + std_preceding_dbh + std_preceding_dbh:std_total_nci +
+              std_preceding_dbh:std_norm_md + std_PC1 + (1|Site/Plot/Tree), ovatdata)
+ovat_md_pred<-glmm.predict(mod=model, newdat=data.frame(1, 0, c(1,-1), 0, 0, 0*c(1,-1), 0*0, c(1,-1)*0), 
+                           se.mult=1.96, logit_link=FALSE, log_link=FALSE, glmmTMB=FALSE)^2
+ovat_md_pred$md_category<-c("dry", "wet")
+ovat_md_pred$Focal_sp <- 'E. ovata'
+
+#vimi
+model<-lmer(sqrt(growth_rate) ~ std_total_nci + std_norm_md +
+              std_norm_md:std_total_nci + std_preceding_dbh + std_preceding_dbh:std_total_nci +
+              std_preceding_dbh:std_norm_md + std_PC1 + (1|Site/Plot/Tree), vimidata)
+vimi_md_pred<-glmm.predict(mod=model, newdat=data.frame(1, 0, c(1,-1), 0, 0, 0*c(1,-1), 0*0, c(1,-1)*0), 
+                           se.mult=1.96, logit_link=FALSE, log_link=FALSE, glmmTMB=FALSE)^2
+vimi_md_pred$md_category<-c("dry", "wet")
+vimi_md_pred$Focal_sp <- 'E. viminalis'
+
+#Merge them all
+pred_md_all <- rbind(amyg_md_pred, obli_md_pred, ovat_md_pred, vimi_md_pred)
+
+## Plot them
+ggplot(pred_md_all, aes(x = Focal_sp, y = y, colour=md_category))+
+  geom_point(position = position_dodge(0.8), cex=2.5)+
+  geom_errorbar(aes(ymin = lower, ymax = upper, width = 0.3), position = position_dodge(0.8), cex=1)+
+  ylab("Growth rate (mm/day)")+
+  xlab("Species")+
+  theme_classic()+
+  my_theme+
+  theme(axis.ticks.x = element_blank(),
+        axis.text.x = element_text(face = "italic"))
 
 #### Predictive plots of growth ~ high and low NCI ####
 #Standard size (mean), standard long-term MD, standard PC1, standard MD anomaly
@@ -1000,6 +1145,62 @@ ggplot(pred_dbh_all, aes(x = Focal_sp, y = y, colour=dbh_category))+
   theme(axis.ticks.x = element_blank(),
         axis.text.x = element_text(face = "italic"))
 max(ovatdata$growth_rate)
+
+#### Predictive plots of growth ~ anomalous MD wet and dry ####
+
+#amyg
+model<-lmer(sqrt(growth_rate) ~ std_total_nci + std_anomaly + 
+              std_anomaly:std_total_nci + std_preceding_dbh + std_preceding_dbh:std_total_nci +
+              std_preceding_dbh:std_anomaly + std_PC1 + (1|Site/Plot/Tree), amygdata)
+## you can make multiple predictions at once - here I made the predictions for md =1 and md=-1
+amyg_an_pred<-glmm.predict(mod=model, newdat=data.frame(1, 0, c(1,-1), 0, 0, 0*c(1,-1), 0*0, c(1,-1)*0), 
+                           se.mult=1.96, logit_link=FALSE, log_link=FALSE, glmmTMB=FALSE)^2
+## add the an category
+amyg_an_pred$an_category<-c("dry", "wet")
+#add species name
+amyg_an_pred$Focal_sp <- 'E. amygdalina'
+
+
+#obli
+model<-lmer(sqrt(growth_rate) ~ std_total_nci + std_anomaly + 
+              std_anomaly:std_total_nci + std_preceding_dbh + std_preceding_dbh:std_total_nci +
+              std_preceding_dbh:std_anomaly + std_PC1 + (1|Site/Plot/Tree), oblidata)
+obli_an_pred<-glmm.predict(mod=model, newdat=data.frame(1, 0, c(1,-1), 0, 0, 0*c(1,-1), 0*0, c(1,-1)*0), 
+                           se.mult=1.96, logit_link=FALSE, log_link=FALSE, glmmTMB=FALSE)^2
+obli_an_pred$an_category<-c("dry", "wet")
+obli_an_pred$Focal_sp <- 'E. obliqua'
+
+#ovat
+model<-lmer(sqrt(growth_rate) ~ std_total_nci + std_anomaly +
+              std_anomaly:std_total_nci + std_preceding_dbh + std_preceding_dbh:std_total_nci +
+              std_preceding_dbh:std_anomaly + std_PC1 + (1|Site/Plot/Tree), ovatdata)
+ovat_an_pred<-glmm.predict(mod=model, newdat=data.frame(1, 0, c(1,-1), 0, 0, 0*c(1,-1), 0*0, c(1,-1)*0), 
+                           se.mult=1.96, logit_link=FALSE, log_link=FALSE, glmmTMB=FALSE)^2
+ovat_an_pred$an_category<-c("dry", "wet")
+ovat_an_pred$Focal_sp <- 'E. ovata'
+
+#vimi
+model<-lmer(sqrt(growth_rate) ~ std_total_nci + std_anomaly + 
+              std_anomaly:std_total_nci + std_preceding_dbh + std_preceding_dbh:std_total_nci +
+              std_preceding_dbh:std_anomaly + std_PC1 + (1|Site/Plot/Tree), vimidata)
+vimi_an_pred<-glmm.predict(mod=model, newdat=data.frame(1, 0, c(1,-1), 0, 0, 0*c(1,-1), 0*0, c(1,-1)*0), 
+                           se.mult=1.96, logit_link=FALSE, log_link=FALSE, glmmTMB=FALSE)^2
+vimi_an_pred$an_category<-c("dry", "wet")
+vimi_an_pred$Focal_sp <- 'E. viminalis'
+
+#Merge them all
+pred_an_all <- rbind(amyg_an_pred, obli_an_pred, ovat_an_pred, vimi_an_pred)
+
+## Plot them
+ggplot(pred_an_all, aes(x = Focal_sp, y = y, colour=an_category))+
+  geom_point(position = position_dodge(0.8), cex=2.5)+
+  geom_errorbar(aes(ymin = lower, ymax = upper, width = 0.3), position = position_dodge(0.8), cex=1)+
+  ylab("Growth rate (mm/day)")+
+  xlab("Species")+
+  theme_classic()+
+  my_theme+
+  theme(axis.ticks.x = element_blank(),
+        axis.text.x = element_text(face = "italic"))
 
 #### Plotting predictive plots all together ####
 #pred_md_all, pred_nci_all, pred_dbh_all
