@@ -123,6 +123,9 @@ vif(amygmod1)
 #great
 plot(amygmod1)
 
+amygsim <- lmer(sqrt(growth_rate) ~ 1 + (1|Site/Plot/Tree), amygdata)
+summary(amygsim)
+
 ### OBLI ####
 oblimod1 <- lmer(sqrt(growth_rate) ~ std_total_nci + std_norm_md + std_anomaly + 
                    std_norm_md:std_total_nci + std_preceding_dbh + std_preceding_dbh:std_total_nci + 
@@ -132,7 +135,12 @@ plot(oblimod1dharma)
 #great
 summary(oblimod1)
 vif(oblimod1)
-#great
+#bit big for size and size:NCI?
+
+ggplot(oblidata, aes(x = std_total_nci, y = std_norm_md))+
+  geom_jitter(alpha=0.2)+
+  geom_smooth(method="lm")+
+  theme_classic()
 
 ### OVAT ####
 ovatmod1 <- lmer(sqrt(growth_rate) ~ std_total_nci + std_norm_md + std_anomaly + 
@@ -150,6 +158,20 @@ plot(ovatmod1)
 qqp(ranef(ovatmod1)$`Plot:Site`[,1])
 
 ### How correlated are MD anomaly and long-term mean MD? Only two sites really
+ggplot(oblidata, aes(x = std_norm_md, y = std_anomaly))+
+  geom_jitter(alpha=0.2)+
+  geom_smooth(method="lm")+
+  theme_classic()
+
+test <- lmer(std_anomaly ~ std_norm_md + (1|Site/Plot/Tree), vimidata)
+summary(test)
+r.squaredGLMM(test)
+
+#signif and 0.38 for amyg
+#fine for obli
+#signif and 0.29 for ovat
+#signif and 0.45 for vimi
+#But all vifs <3
 
 ### VIMI ####
 vimimod1 <- lmer(sqrt(growth_rate) ~ std_total_nci + std_norm_md + std_anomaly + 
@@ -162,8 +184,7 @@ summary(vimimod1)
 vif(vimimod1)
 #great
 
-
-### New models - long-term MD and anamolous MD ####
+### New models - long-term MD and anomalous MD ####
 #### MD ####
 amygmod_md <- lmer(sqrt(growth_rate) ~ std_total_nci + std_norm_md + 
                      std_norm_md:std_total_nci + std_preceding_dbh + std_preceding_dbh:std_total_nci +
@@ -175,6 +196,116 @@ summary(amygmod_md)
 vif(amygmod_md)
 #great
 plot(amygmod_md)
+
+#### 23/11/22
+#period 1 vs period 2 for amyg and ovat, where OLRE correlated with fixed effects
+
+ggplot(amygdata, aes(x = std_norm_md*std_total_nci, y = std_anomaly))+
+  geom_point()+
+  geom_smooth(method='lm')+
+  theme_classic()
+#norm md*NCI interaction term is correlated with anomaly
+
+ggplot(amygdata, aes(x = anomaly, y = sqrt(growth_rate)))+
+  geom_point()+
+  geom_smooth(method='lm')+
+  theme_classic()
+
+ggplot(ovatdata, aes(x = anomaly, y = norm_md))+
+  geom_point()+
+  geom_smooth(method='lm')+
+  theme_classic()
+
+#Making site:sp:plot:tree as unique identifier
+
+amygtest <-amygdata
+amygtest <- amygtest %>% unite("plotid", Site:Plot, remove = "false")
+amygtest<- amygtest %>% unite("treeid", Site:Plot:Tree, remove = "false")
+amygtest$ID <- seq.int(nrow(amygtest))
+amygtest<- amygtest %>% unite("sitetree", c("Site", "ID"), remove = "false")
+
+oblitest<- oblidata
+oblitest<- oblitest %>% unite("treeid", Site:Plot:Tree, remove = "false")
+oblitest<- oblitest %>% unite("plotid", Site:Plot, remove = "false")
+
+ovattest<- ovatdata
+ovattest<- ovattest %>% unite("treeid", Site:Plot:Tree, remove = "false")
+ovattest<- ovattest %>% unite("plotid", Site:Plot, remove = "false")
+
+vimitest<- vimidata
+vimitest<- vimitest %>% unite("treeid", Site:Plot:Tree, remove = "false")
+vimitest<- vimitest %>% unite("plotid", Site:Plot, remove = "false")
+
+
+ggplot(oblitest, aes(x = std_anomaly, y = sqrt(growth_rate), colour = Site))+
+  geom_point()+
+  geom_smooth(method='lm')+
+  theme_classic()
+#why problems here
+
+ggplot(vimitest, aes(x = std_anomaly, y = sqrt(growth_rate), colour = plotid))+
+  geom_point()+
+  geom_smooth(method='lm')+
+  theme_classic()#+
+ # theme(legend.position="none")
+#Within a site, amyg, negative relationship between growth and md anomaly so if 
+#site is wetter than normal, growth rates are faster
+#ovat not responsive
+ggplot(amygtest, aes(x = std_anomaly, y = sqrt(growth_rate), colour = plotid))+
+  geom_point()+
+  geom_smooth(method='lm')+
+  theme_classic()
+#Problem is Simpson's paradox where grouping has one direction of relationship
+#and overall trend is something else
+#trends estimated at the group level (site or site:plot or even site:plot:tree differ from globally estimated trends)
+
+## Testing by period
+vimidata %>% filter(Period == 2) %>%
+  ggplot(aes(x = anomaly, y = sqrt(growth_rate)))+
+  geom_point()+
+  geom_smooth(method='lm')+
+  theme_classic()
+
+test <- lmer(sqrt(growth_rate) ~ std_total_nci + std_PC1 + std_preceding_dbh + (1|Site/Plot/Tree), amygdata)
+summary(test)
+amygmodmddharma <- simulateResiduals(test)
+plot(amygmodmddharma)
+
+with(amygdata, plot(sqrt(growth_rate) ~ std_norm_md, col = ifelse(std_total_nci>0, "red", "blue")))
+curve(cbind(1, 1, x, 0, 0, 1*x, 1*0, x*0)%*%fixef(amygmod_md), add=TRUE, col="red")
+curve(cbind(1, -1, x, 0, 0, -1*x, -1*0, x*0)%*%fixef(amygmod_md), add=TRUE, col="blue")
+
+
+with(amygdata, plot(sqrt(growth_rate) ~ std_norm_md, col = ifelse(std_total_nci>0, "red", "blue")))
+curve(cbind(1, 1, x, 1*x)%*%fixef(amygmod_simple), add=TRUE, col="red")
+curve(cbind(1, -1, x, -1*x)%*%fixef(amygmod_simple), add=TRUE, col="blue")
+
+testmod <- lm(sqrt(growth_rate) ~ period_anomaly, amygdata)
+summary(testmod)
+
+amygmod_simple <- lmer(sqrt(growth_rate) ~ period_md + (1|Site/Plot/Tree), amygdata)
+summary(amygmod_simple)
+
+with(amygdata, plot(sqrt(growth_rate) ~ period_md))
+curve(cbind(1, x)%*%fixef(amygmod_simple), add=TRUE, col="red")
+curve(cbind(1, x)%*%coef(testmod), add=TRUE, col="red")
+
+#coef instead of fixef for lm instead of lmer
+curve(cbind(1, -1, x, -1*x)%*%fixef(amygmod_simple), add=TRUE, col="blue")
+mod <- lm(sqrt(growth_rate) ~ std_anomaly, amygdata)
+with(amygdata, plot(sqrt(growth_rate) ~ std_anomaly))
+curve(cbind(1,x)%*%coef(mod),add=TRUE)
+mod2 <- lmer(sqrt(growth_rate) ~ std_anomaly +(1|Site/Plot/Tree), amygdata)
+with(amygdata, plot(sqrt(growth_rate) ~ std_anomaly))
+curve(cbind(1,x)%*%fixef(mod2),add=TRUE)
+#SITE is the problem...
+mod <- lm(sqrt(growth_rate) ~ std_anomaly, ovatdata)
+with(ovatdata, plot(sqrt(growth_rate) ~ std_anomaly))
+curve(cbind(1,x)%*%coef(mod),add=TRUE)
+mod2 <- lmer(sqrt(growth_rate) ~ std_anomaly +(1|Site/Plot/Tree), ovatdata)
+with(ovatdata, plot(sqrt(growth_rate) ~ std_anomaly))
+curve(cbind(1,x)%*%fixef(mod2),add=TRUE)
+######
 
 oblimod_md <- lmer(sqrt(growth_rate) ~ std_total_nci + std_norm_md + 
                      std_norm_md:std_total_nci + std_preceding_dbh + std_preceding_dbh:std_total_nci +
@@ -200,6 +331,17 @@ vimimodmddharma <- simulateResiduals(vimimod_md)
 plot(vimimodmddharma)
 summary(vimimod_md)
 vif(vimimod_md)
+
+#### Long-term MD without REs ####
+amygmod_md <- lmer(sqrt(growth_rate) ~ std_total_nci + std_norm_md + 
+                     std_norm_md:std_total_nci + std_preceding_dbh + std_preceding_dbh:std_total_nci +
+                     std_preceding_dbh:std_norm_md + std_PC1 + (1|Site/Plot), amygdata)
+amygmodmddharma <- simulateResiduals(amygmod_md)
+plot(amygmodmddharma)
+#terrible residuals, ks test signif
+summary(amygmod_md)
+vif(amygmod_md)
+#great
 
 #### Anomaly ####
 amygmod_an <- lmer(sqrt(growth_rate) ~ std_total_nci + std_anomaly + 
@@ -250,6 +392,21 @@ ggplot(amygdata, aes(x= std_PC1, y = growth_rate))+
 test <- lmer(sqrt(growth_rate) ~ std_anomaly + I(std_anomaly^2) + (1|Site/Plot/Tree), amygdata)
 summary(test)
 
+#### Anomaly without REs ####
+amygmod_an <- lmer(sqrt(growth_rate) ~ std_total_nci + std_anomaly + 
+                     std_anomaly:std_total_nci + std_preceding_dbh + std_preceding_dbh:std_total_nci +
+                     std_preceding_dbh:std_anomaly + std_PC1 + (1|Site/sitetreeid), amygtest)
+amygmodandharma <- simulateResiduals(amygmod_an)
+plot(amygmodandharma)
+#terrible residuals
+summary(amygmod_an)
+vif(amygmod_an)
+#great
+
+tstmod <- lmer(sqrt(growth_rate) ~ std_total_nci + std_anomaly + 
+               std_anomaly:std_total_nci + std_preceding_dbh + std_preceding_dbh:std_total_nci +
+               std_preceding_dbh:std_anomaly + std_PC1 + (Site|Plot/Tree), amygdata)
+summary(tstmod)
 #### Table of model output ####
 ## Extracting values for all in a loop
 model_list <- list(amygmod1, oblimod1, ovatmod1, vimimod1)
@@ -266,7 +423,7 @@ rownames(effects_table) <- NULL
 effects_table$Effect[startsWith(effects_table$Effect, '(Intercept)')] <- 'Intercept'
 effects_table$Effect[startsWith(effects_table$Effect, 'std_PC1')] <- 'std_PC1'
 effects_table$Effect[startsWith(effects_table$Effect, 'std_norm_md:std_preceding_dbh')] <- 'norm_md:std_preceding_dbh'
-effects_table$Effect[startsWith(effects_table$Effect, 'std_norm_md')] <- 'std_norm_md'
+effects_table$Effect[startsWith(effects_table$Effect, '=std_norm_md')] <- 'std_norm_md'
 effects_table$Effect[startsWith(effects_table$Effect, 'std_anomaly')] <- 'std_anomaly'
 effects_table$Effect[startsWith(effects_table$Effect, 'std_preceding_dbh')] <- 'std_preceding_dbh'
 effects_table$Effect[startsWith(effects_table$Effect, 'std_total_nci:std_norm_md')] <- 'total_nci:std_norm_md'
@@ -568,7 +725,7 @@ dev.off()
 
 ### Back-transformed axes
 dev.off()
-pdf("Output/panel_growth~NCI+norm2.pdf", width=21, height=21)
+pdf("Output/panel_growth~NCI+norm.pdf", width=21, height=21)
 par(oma=c(8,4,3,1), mfrow=c(2,2), mar=c(7, 6, 4, 1))
 for(i in 1:length(specieslist)){
   plotted.data<-as.data.frame(specieslist[i])
@@ -693,6 +850,69 @@ mtext("Growth rate (mm/day, sqrt)", side=2, outer=T, cex=4, adj=0.91, line=-4)
 mtext("Long-term MD (standardised)", side=1, outer=T, cex=4, adj=0.93, line=-2)
 mtext("Long-term MD (standardised)", side=1, outer=T, cex=4, adj=0.15, line=-2)
 dev.off()
+
+### Simplifying glmm.predict, back-transformed
+#for ESA talk
+dev.off()
+pdf("Output/panel_growth~MD+NCI_backtransf.pdf", width=21, height=21)
+par(oma=c(8,4,3,1), mfrow=c(2,2), mar=c(7, 6, 4, 1))
+for(i in 1:length(specieslist)){
+  plotted.data<-as.data.frame(specieslist[i])
+  plot(growth_rate ~ jitter(std_norm_md, amount = 0.05), pch = 19, col = alpha(ifelse(std_total_nci>0, "#CC79A7", "#0072B2"), 0.4), ylab="", ylim=c(0,0.26), xlim=c(-2.2,1.2), xlab="",  tck=-0.01, cex=3, cex.axis = 3, padj=0.5, plotted.data)
+  mtext(paste(letters[i], ")", sep=""), side=2, padj=-8.5,las=1, cex=4)
+  title(main=bquote(italic(.(speciesnamelist[i]))), line=2, cex.main=4)
+  model<-lmer(sqrt(growth_rate) ~ std_total_nci + std_norm_md + std_anomaly + 
+                std_norm_md:std_total_nci + std_preceding_dbh + std_preceding_dbh:std_total_nci +
+                std_preceding_dbh:std_norm_md + std_PC1 + (1|Site/Plot/Tree), plotted.data)
+  x_to_plot_low<-seq.func(plotted.data$std_norm_md[plotted.data$std_total_nci<0])
+  #x_to_plot_mean<-seq.func(plotted.data$std_total_nci)
+  x_to_plot_high<-seq.func(plotted.data$std_norm_md[plotted.data$std_total_nci>0])
+  #low nci - sparse - blue
+  plotted.pred <- glmm.predict(mod = model, newdat = data.frame(1, -1, x_to_plot_low, 0, 0, 0, -1*x_to_plot_low, -1*0, x_to_plot_low*0), se.mult = 1.96, logit_link=FALSE, log_link=FALSE, glmmTMB=FALSE)^2
+  plot.CI.func(x.for.plot = x_to_plot_low, pred = plotted.pred$y, upper = plotted.pred$upper, lower = plotted.pred$lower, env.colour = "#0072B2", env.trans = 50, line.colour = "#0072B2", line.weight = 2)
+  #high nci - dense - pink
+  plotted.pred <- glmm.predict(mod = model, newdat = data.frame(1, 1, x_to_plot_high, 0, 0, 0, 1*x_to_plot_high, 1*0, x_to_plot_high*0), se.mult = 1.96, logit_link=FALSE, log_link=FALSE, glmmTMB=FALSE)^2
+  plot.CI.func(x.for.plot = x_to_plot_high, pred = plotted.pred$y, upper = plotted.pred$upper, lower = plotted.pred$lower, env.colour = "#CC79A7", env.trans = 50, line.colour = "#CC79A7", line.weight = 2)
+}
+mtext("Growth rate (mm/day)", side=2, outer=T, cex=3.8, adj=0.15, line=-2)
+mtext("Growth rate (mm/day)", side=2, outer=T, cex=3.8, adj=0.94, line=-2)
+mtext("Long-term MD (std)", side=1, outer=T, cex=3.8, adj=0.91, line=-1.9)
+mtext("Long-term MD (std)", side=1, outer=T, cex=3.8, adj=0.15, line=-1.9)
+reset()
+legend("bottom", title=NULL, horiz=T, legend=c("Low NCI", "High NCI"),
+       col=c("#0072B2", "#CC79A7"), pch=19, cex=4, bty="n")
+dev.off()
+
+### 
+dev.off()
+pdf("Output/panel_growth~MD+NCI2.pdf", width=21, height=21)
+par(oma=c(8,4,3,1), mfrow=c(2,2), mar=c(7, 6, 4, 1))
+for(i in 1:length(specieslist)){
+  plotted.data<-as.data.frame(specieslist[i])
+  plot(sqrt(growth_rate) ~ jitter(std_norm_md, amount = 0.05), pch = 19, col = alpha(ifelse(std_total_nci>0, "#CC79A7", "#0072B2"), 0.4), ylab="", ylim=c(0,0.52), xlim=c(-2.2,1.2), xlab="",  tck=-0.01, cex=3, cex.axis = 3, padj=0.5, plotted.data)
+  mtext(paste(letters[i], ")", sep=""), side=2, padj=-8.5,las=1, cex=4)
+  title(main=bquote(italic(.(speciesnamelist[i]))), line=2, cex.main=4)
+  model<-lmer(sqrt(growth_rate) ~ std_total_nci + std_norm_md + std_anomaly + 
+                std_norm_md:std_total_nci + std_preceding_dbh + std_preceding_dbh:std_total_nci +
+                std_preceding_dbh:std_norm_md + std_PC1 + (1|Site/Plot/Tree), plotted.data)
+  x_to_plot_low<-seq.func(plotted.data$std_norm_md[plotted.data$std_total_nci<0])
+  x_to_plot_high<-seq.func(plotted.data$std_norm_md[plotted.data$std_total_nci>0])
+  #low nci - sparse - blue
+  plotted.pred <- glmm.predict(mod = model, newdat = data.frame(1, -1, x_to_plot_low, 0, 0, 0, -1*x_to_plot_low, -1*0, x_to_plot_low*0), se.mult = 1.96, logit_link=FALSE, log_link=FALSE, glmmTMB=FALSE)
+  plot.CI.func(x.for.plot = x_to_plot_low, pred = plotted.pred$y, upper = plotted.pred$upper, lower = plotted.pred$lower, env.colour = "#0072B2", env.trans = 50, line.colour = "#0072B2", line.weight = 2)
+  #high nci - dense - pink
+  plotted.pred <- glmm.predict(mod = model, newdat = data.frame(1, 1, x_to_plot_high, 0, 0, 0, 1*x_to_plot_high, 1*0, x_to_plot_high*0), se.mult = 1.96, logit_link=FALSE, log_link=FALSE, glmmTMB=FALSE)
+  plot.CI.func(x.for.plot = x_to_plot_high, pred = plotted.pred$y, upper = plotted.pred$upper, lower = plotted.pred$lower, env.colour = "#CC79A7", env.trans = 50, line.colour = "#CC79A7", line.weight = 2)
+}
+mtext("Growth rate (mm/day, sqrt)", side=2, outer=T, cex=3.8, adj=0.12, line=-2)
+mtext("Growth rate (mm/day, sqrt)", side=2, outer=T, cex=3.8, adj=0.94, line=-2)
+mtext("Long-term MD (std)", side=1, outer=T, cex=3.8, adj=0.90, line=-1.9)
+mtext("Long-term MD (std)", side=1, outer=T, cex=3.8, adj=0.15, line=-1.9)
+reset()
+legend("bottom", title=NULL, horiz=T, legend=c("Low NCI", "High NCI"),
+       col=c("#0072B2", "#CC79A7"), pch=19, cex=4, bty="n")
+dev.off()
+
 #### Panel plot of growth ~ con and het neighbourhood crowding ####
 
 dev.off()
@@ -939,7 +1159,7 @@ obli_md_pred$Focal_sp <- 'E. obliqua'
 model<-lmer(sqrt(growth_rate) ~ std_total_nci + std_norm_md + std_anomaly +
               std_norm_md:std_total_nci + std_preceding_dbh + std_preceding_dbh:std_total_nci +
               std_preceding_dbh:std_norm_md + std_PC1 + (1|Site/Plot/Tree), ovatdata)
-ovat_md_pred<-glmm.predict(mod=model, newdat=data.frame(1, 0, c(1,-1), 0, 0, 0, 0*c(1,-1), 0*0, c(1,-1)*0), 
+ovat_md_pred<-glmm.predict(mod=model, newdat=data.frame(1, 0, c(1,-1), 0, 0, 0*c(1,-1), 0*0, c(1,-1)*0), 
                            se.mult=1.96, logit_link=FALSE, log_link=FALSE, glmmTMB=FALSE)^2
 ovat_md_pred$md_category<-c("dry", "wet")
 ovat_md_pred$Focal_sp <- 'E. ovata'
@@ -1023,8 +1243,8 @@ ggplot(pred_md_all, aes(x = Focal_sp, y = y, colour=md_category))+
   geom_errorbar(aes(ymin = lower, ymax = upper, width = 0.3), position = position_dodge(0.8), cex=1)+
   ylab("Growth rate (mm/day)")+
   xlab("Species")+
+  labs(colour = "Long-term MD")+
   theme_classic()+
-  my_theme+
   theme(axis.ticks.x = element_blank(),
         axis.text.x = element_text(face = "italic"))
 
@@ -1058,7 +1278,7 @@ obli_pred_nci$Focal_sp <- 'E. obliqua'
 model<-lmer(sqrt(growth_rate) ~ std_total_nci + std_norm_md + std_anomaly +
               std_norm_md:std_total_nci + std_preceding_dbh + std_preceding_dbh:std_total_nci +
               std_preceding_dbh:std_norm_md + std_PC1 + (1|Site/Plot/Tree), ovatdata)
-ovat_pred_nci<-glmm.predict(mod=model, newdat=data.frame(1, c(1,-1), 0, 0, 0, 0, c(1,-1)*0, c(1,-1)*0, 0*0), 
+ovat_pred_nci<-glmm.predict(mod=model, newdat=data.frame(1, c(1,-1), 0, 0, 0, c(1,-1)*0, c(1,-1)*0, 0*0), 
                                se.mult=1.96, logit_link=FALSE, log_link=FALSE, glmmTMB=FALSE)^2
 ovat_pred_nci$nci_category<-c("high NCI", "low NCI")
 ovat_pred_nci$Focal_sp <- 'E. ovata'
@@ -1117,7 +1337,7 @@ obli_pred_dbh$Focal_sp <- 'E. obliqua'
 model<-lmer(sqrt(growth_rate) ~ std_total_nci + std_norm_md + std_anomaly +
               std_norm_md:std_total_nci + std_preceding_dbh + std_preceding_dbh:std_total_nci +
               std_preceding_dbh:std_norm_md + std_PC1 + (1|Site/Plot/Tree), ovatdata)
-ovat_pred_dbh<-glmm.predict(mod=model, newdat=data.frame(1, 0, 0, 0, c(1,-1), 0, 0*0, 0*c(1,-1), 0*c(1,-1)), 
+ovat_pred_dbh<-glmm.predict(mod=model, newdat=data.frame(1, 0, 0, c(1,-1), 0, 0*0, 0*c(1,-1), 0*c(1,-1)), 
                             se.mult=1.96, logit_link=FALSE, log_link=FALSE, glmmTMB=FALSE)^2
 ovat_pred_dbh$dbh_category<-c("big", "small")
 ovat_pred_dbh$Focal_sp <- 'E. ovata'
@@ -1146,7 +1366,7 @@ ggplot(pred_dbh_all, aes(x = Focal_sp, y = y, colour=dbh_category))+
         axis.text.x = element_text(face = "italic"))
 max(ovatdata$growth_rate)
 
-#### Predictive plots of growth ~ anomalous MD wet and dry ####
+#### Predictive plots of growth ~ anomalous MD model wet and dry ####
 
 #amyg
 model<-lmer(sqrt(growth_rate) ~ std_total_nci + std_anomaly + 
@@ -1197,8 +1417,8 @@ ggplot(pred_an_all, aes(x = Focal_sp, y = y, colour=an_category))+
   geom_errorbar(aes(ymin = lower, ymax = upper, width = 0.3), position = position_dodge(0.8), cex=1)+
   ylab("Growth rate (mm/day)")+
   xlab("Species")+
+  labs(colour = "MD anomaly")+
   theme_classic()+
-  my_theme+
   theme(axis.ticks.x = element_blank(),
         axis.text.x = element_text(face = "italic"))
 
