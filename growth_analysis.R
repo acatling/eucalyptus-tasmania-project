@@ -38,12 +38,14 @@ ggplot(growthnbhdata, aes(x = std_PC2, y = sqrt(growth_rate)))+
 hist(growthnbhdata$growth_no_negs)
 hist(growthnbhdata$growth_no_negs[growthnbhdata$Period==1])
 hist(growthnbhdata$growth_no_negs[growthnbhdata$Period==2])
+hist(growthnbhdata$growth_no_negs[growthnbhdata$Period==3])
 hist(sqrt(growthnbhdata$growth_no_negs))
 #Growth rate
 hist(growthnbhdata$growth_rate)
+hist(sqrt(growthnbhdata$growth_rate))
 hist(growthnbhdata$growth_rate[growthnbhdata$Period==1])
 hist(growthnbhdata$growth_rate[growthnbhdata$Period==2])
-hist(sqrt(growthnbhdata$growth_rate))
+hist(growthnbhdata$growth_rate[growthnbhdata$Period==3])
 #DBH
 hist(growthnbhdata$DBH_cm)
 hist(sqrt(growthnbhdata$DBH_cm))
@@ -77,7 +79,9 @@ hist(log(growthnbhdata$inter_nci))
 #   group_by(Site, Focal_sp, Plot, Tree) %>% filter(row_number() == 1)
 # dbhnumeric$DBH_cm <- as.numeric(dbhnumeric$DBH_cm)
 
-ggplot(onerowdata, aes(x = Focal_sp, y = sqrt(DBH_cm)))+
+#This is now preceding_dbh, need to update to run*
+
+ggplot(onerowdata, aes(x = Focal_sp, y = sqrt(preceding_dbh)))+
   geom_boxplot()+
   geom_jitter(width = 0.2, alpha = 0.5, colour = "forestgreen")+
   theme_classic()+
@@ -167,7 +171,9 @@ meangrowth <- growthnbhdata %>%
   summarise(mean_growth_rate_period1 = mean(growth_rate[Period == 1]),
             sd_growth_rate_period1 = sd(growth_rate[Period == 1]),
             mean_growth_rate_period2 = mean(growth_rate[Period == 2]),
-            sd_growth_rate_period2 = sd(growth_rate[Period == 2]))
+            sd_growth_rate_period2 = sd(growth_rate[Period == 2]),
+            mean_growth_rate_period3 = mean(growth_rate[Period == 3]),
+            sd_growth_rate_period3 = sd(growth_rate[Period == 3]))
 
 ggplot(growthnbhdata, aes(x = Focal_sp, y = sqrt(growth_rate)))+
   geom_boxplot()+
@@ -184,6 +190,22 @@ summary(modelgr1)
 TukeyHSD(modelgr1)
 #E. viminalis grows at a significantly faster rate than other species
 # E. amygdalina, E. ovata and E. obliqua all grow at similar rates
+
+modelgr2 <- lm(sqrt(growth_rate) ~ Focal_sp, growthnbhdata)
+dharma <- simulateResiduals(modelgr2)
+plot(dharma)
+summary(modelgr2)
+hist(sqrt(growthnbhdata$growth_rate))
+emmeans(modelgr2, list(pairwise ~ Focal_sp), adjust="tukey")
+
+#Really unhappy model. Don't trust output... fine as just regular lm or with only tree as RE,
+# site/plot RE that scares it
+modelgr3 <- lmer(sqrt(growth_rate) ~ Focal_sp + (1|Site/Plot/Tree), growthnbhdata)
+dharma <- simulateResiduals(modelgr3)
+plot(dharma)
+summary(modelgr3)
+emmeans(modelgr3, list(pairwise ~ Focal_sp), adjust="tukey")
+
 
 ## Do growth rates differ by period?
 ggplot(growthnbhdata, aes(x = Period, y = sqrt(growth_rate)))+

@@ -1472,3 +1472,9 @@ dev.off()
 #If code = 3 a head is drawn at both ends of the arrow
 
 
+
+#### Plotting how rainfall has changed through periods ####
+period_rainfall_data$period_rainfall <- as.numeric(period_rainfall_data$period_rainfall)
+ggplot(period_rainfall_data, aes(x = Site, y = period_rainfall, colour = Period))+
+  geom_point(cex=4)+
+  theme_classic()

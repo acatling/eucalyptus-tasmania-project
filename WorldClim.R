@@ -199,7 +199,7 @@ ResTasMonthly$CMD_10b <- raster::extract(x=tas_md10, y= cbind(ResTas$Centred_Lon
 ResTasMonthly$CMD_11b <- raster::extract(x=tas_md11, y= cbind(ResTas$Centred_Long,ResTas$Centred_Lat))
 ResTasMonthly$CMD_12b <- raster::extract(x=tas_md12, y= cbind(ResTas$Centred_Long,ResTas$Centred_Lat))
 
-# import Site and Period table so that I can assign period 1 and 2 values directly
+# import Site and Period table so that I can assign period values directly
 site_period <- period_climate %>% dplyr::select(Site, Period)
 climate_diff <- left_join(ResTasMonthly, site_period)
 
@@ -212,6 +212,8 @@ climate_diff$norm_md <- 123
 #EPF
 ### EPF period 1 and 2 - feb to feb and march to march - give same values
 # because it is one year 
+#4 is Jan, 5 is Feb, 6 is March, 7 Apr, 8 May, 9 Jun, 10 Jul, 11 Aug, 12 Sep, 13 Oct, 14 Nov, 15 Dec
+#First line is saying sum feb to december + jan 
 climate_diff$norm_md[climate_diff$Site=="EPF" & climate_diff$Period == 1] <- sum(climate_diff[1,5:15], climate_diff[1,4])
 climate_diff$norm_md[climate_diff$Site=="TMP" & climate_diff$Period == 1] <- sum(climate_diff[3,5:15], climate_diff[3,4:5])
 climate_diff$norm_md[climate_diff$Site=="MER" & climate_diff$Period == 1] <- sum(climate_diff[5,5:15], climate_diff[5,4])
@@ -224,10 +226,19 @@ climate_diff$norm_md[climate_diff$Site=="BOF" & climate_diff$Period == 1] <- sum
 climate_diff$norm_md[climate_diff$Site=="EPF" & climate_diff$Period == 2] <- sum(climate_diff[1,6:15], climate_diff[1,4:5])
 climate_diff$norm_md[climate_diff$Site=="TMP" & climate_diff$Period == 2] <- sum(climate_diff[3,6:15], climate_diff[3,4])
 climate_diff$norm_md[climate_diff$Site=="MER" & climate_diff$Period == 2] <- sum(climate_diff[5,5:15], climate_diff[5,4:5])
-climate_diff$norm_md[climate_diff$Site=="DOG" & climate_diff$Period == 2] <- sum(climate_diff[7,5:15], climate_diff[7,4])
+climate_diff$norm_md[climate_diff$Site=="DOG" & climate_diff$Period == 2] <- sum(climate_diff[7,5:15], climate_diff[7,4:5])
 climate_diff$norm_md[climate_diff$Site=="GRA" & climate_diff$Period == 2] <- sum(climate_diff[9,5:15], climate_diff[9,4])
 climate_diff$norm_md[climate_diff$Site=="FREY" & climate_diff$Period == 2] <- sum(climate_diff[11,6:15], climate_diff[11,4:5])
 climate_diff$norm_md[climate_diff$Site=="BOF" & climate_diff$Period == 2] <- sum(climate_diff[13,5:15], climate_diff[13,4:5])
+
+#Period 3
+climate_diff$norm_md[climate_diff$Site=="EPF" & climate_diff$Period == 3] <- sum(climate_diff[1,6:15], climate_diff[1,4:5])
+climate_diff$norm_md[climate_diff$Site=="TMP" & climate_diff$Period == 3] <- sum(climate_diff[3,5:15], climate_diff[3,4:5])
+climate_diff$norm_md[climate_diff$Site=="MER" & climate_diff$Period == 3] <- sum(climate_diff[5,6:15], climate_diff[5,4:5])
+climate_diff$norm_md[climate_diff$Site=="DOG" & climate_diff$Period == 3] <- sum(climate_diff[7,6:15], climate_diff[7,4:5])
+climate_diff$norm_md[climate_diff$Site=="GRA" & climate_diff$Period == 3] <- sum(climate_diff[9,5:15], climate_diff[9,4:5])
+climate_diff$norm_md[climate_diff$Site=="FREY" & climate_diff$Period == 3] <- sum(climate_diff[11,6:15], climate_diff[11,4:5])
+climate_diff$norm_md[climate_diff$Site=="BOF" & climate_diff$Period == 3] <- sum(climate_diff[13,6:15], climate_diff[13,4:5])
 
 climate_diff <- climate_diff %>% dplyr::select(Site, Period, norm_md)
 
@@ -248,51 +259,77 @@ epf_ppt_period1 <- bom_epf %>% subset(date >= "2020-02-01" & date <= "2021-01-31
 #Calculate rainfall for period 2 (March 2021 - March 2022)
 epf_ppt_period2 <- bom_epf %>% subset(date >= "2021-03-01" & date <= "2022-02-28") %>%
   summarise(period2_rainfall = sum(`Rainfall amount (millimetres)`))
+#Calculate rainfall for period 3 (March 2022 - March 2023)
+epf_ppt_period3 <- bom_epf %>% subset(date >= "2022-03-01" & date <= "2023-02-28") %>%
+  summarise(period3_rainfall = sum(`Rainfall amount (millimetres)`, na.rm=T))
+
 #Filling data in table
 climate_diff <- within(climate_diff, period_ppt_by_month[Period == '1' & Site == 'EPF'] <- epf_ppt_period1)
 climate_diff <- within(climate_diff, period_ppt_by_month[Period == '2' & Site == 'EPF'] <- epf_ppt_period2)
+climate_diff <- within(climate_diff, period_ppt_by_month[Period == '3' & Site == 'EPF'] <- epf_ppt_period3)
+
 ## TMP
 tmp_ppt_period1 <- bom_tmp %>% subset(date >= "2020-02-01" & date <= "2021-02-28") %>%
   summarise(period1_rainfall = sum(`Rainfall amount (millimetres)`, na.rm=TRUE))
 tmp_ppt_period2 <- bom_tmp %>% subset(date >= "2021-03-01" & date <= "2022-01-31") %>%
   summarise(period2_rainfall = sum(`Rainfall amount (millimetres)`, na.rm=TRUE))
+tmp_ppt_period3 <- bom_tmp %>% subset(date >= "2022-02-01" & date <= "2023-02-28") %>%
+  summarise(period3_rainfall = sum(`Rainfall amount (millimetres)`, na.rm=TRUE))
 climate_diff <- within(climate_diff, period_ppt_by_month[Period == '1' & Site == 'TMP'] <- tmp_ppt_period1)
 climate_diff <- within(climate_diff, period_ppt_by_month[Period == '2' & Site == 'TMP'] <- tmp_ppt_period2)
+climate_diff <- within(climate_diff, period_ppt_by_month[Period == '3' & Site == 'TMP'] <- tmp_ppt_period3)
+
 ## MER
 mer_ppt_period1 <- bom_mer %>% subset(date >= "2020-02-01" & date <= "2021-01-31") %>%
   summarise(period1_rainfall = sum(`Rainfall amount (millimetres)`, na.rm = TRUE))
 mer_ppt_period2 <- bom_mer %>% subset(date >= "2021-02-01" & date <= "2022-02-28") %>%
   summarise(period2_rainfall = sum(`Rainfall amount (millimetres)`, na.rm = TRUE))
+mer_ppt_period3 <- bom_mer %>% subset(date >= "2022-03-01" & date <= "2023-02-28") %>%
+  summarise(period3_rainfall = sum(`Rainfall amount (millimetres)`, na.rm = TRUE))
 climate_diff <- within(climate_diff, period_ppt_by_month[Period == '1' & Site == 'MER'] <- mer_ppt_period1)
 climate_diff <- within(climate_diff, period_ppt_by_month[Period == '2' & Site == 'MER'] <- mer_ppt_period2)
+climate_diff <- within(climate_diff, period_ppt_by_month[Period == '3' & Site == 'MER'] <- mer_ppt_period3)
+
 ## DOG
 dog_ppt_period1 <- bom_dog %>% subset(date >= "2020-02-01" & date <= "2021-01-31") %>%
   summarise(period1_rainfall = sum(`Rainfall amount (millimetres)`, na.rm = TRUE))
 dog_ppt_period2 <- bom_dog %>% subset(date >= "2021-02-01" & date <= "2022-02-28") %>%
   summarise(period2_rainfall = sum(`Rainfall amount (millimetres)`, na.rm = TRUE))
+dog_ppt_period3 <- bom_dog %>% subset(date >= "2022-03-01" & date <= "2023-02-28") %>%
+  summarise(period3_rainfall = sum(`Rainfall amount (millimetres)`, na.rm = TRUE))
 climate_diff <- within(climate_diff, period_ppt_by_month[Period == '1' & Site == 'DOG'] <- dog_ppt_period1)
 climate_diff <- within(climate_diff, period_ppt_by_month[Period == '2' & Site == 'DOG'] <- dog_ppt_period2)
+climate_diff <- within(climate_diff, period_ppt_by_month[Period == '3' & Site == 'DOG'] <- dog_ppt_period3)
 ## GRA
 gra_ppt_period1 <- bom_gra %>% subset(date >= "2020-02-01" & date <= "2021-01-31") %>%
   summarise(period1_rainfall = sum(`Rainfall amount (millimetres)`, na.rm = TRUE))
 gra_ppt_period2 <- bom_gra %>% subset(date >= "2021-02-01" & date <= "2022-01-31") %>%
   summarise(period2_rainfall = sum(`Rainfall amount (millimetres)`, na.rm = TRUE))
+gra_ppt_period3 <- bom_gra %>% subset(date >= "2022-02-01" & date <= "2023-02-28") %>%
+  summarise(period3_rainfall = sum(`Rainfall amount (millimetres)`, na.rm = TRUE))
 climate_diff <- within(climate_diff, period_ppt_by_month[Period == '1' & Site == 'GRA'] <- gra_ppt_period1)
 climate_diff <- within(climate_diff, period_ppt_by_month[Period == '2' & Site == 'GRA'] <- gra_ppt_period2)
+climate_diff <- within(climate_diff, period_ppt_by_month[Period == '3' & Site == 'GRA'] <- gra_ppt_period3)
 ## FREY
 frey_ppt_period1 <- bom_frey %>% subset(date >= "2020-02-01" & date <= "2021-02-28") %>%
   summarise(period1_rainfall = sum(`Rainfall amount (millimetres)`, na.rm = TRUE))
 frey_ppt_period2 <- bom_frey %>% subset(date >= "2021-03-01" & date <= "2022-02-28") %>%
   summarise(period2_rainfall = sum(`Rainfall amount (millimetres)`, na.rm = TRUE))
+frey_ppt_period3 <- bom_frey %>% subset(date >= "2022-03-01" & date <= "2023-02-28") %>%
+  summarise(period3_rainfall = sum(`Rainfall amount (millimetres)`, na.rm = TRUE))
 climate_diff <- within(climate_diff, period_ppt_by_month[Period == '1' & Site == 'FREY'] <- frey_ppt_period1)
 climate_diff <- within(climate_diff, period_ppt_by_month[Period == '2' & Site == 'FREY'] <- frey_ppt_period2)
+climate_diff <- within(climate_diff, period_ppt_by_month[Period == '3' & Site == 'FREY'] <- frey_ppt_period3)
 ## BOF
 bof_ppt_period1 <- bom_bof %>% subset(date >= "2020-06-01" & date <= "2021-01-31") %>%
   summarise(period1_rainfall = sum(`Rainfall amount (millimetres)`, na.rm = TRUE))
 bof_ppt_period2 <- bom_bof %>% subset(date >= "2021-02-01" & date <= "2022-02-28") %>%
   summarise(period2_rainfall = sum(`Rainfall amount (millimetres)`, na.rm = TRUE))
+bof_ppt_period3 <- bom_bof %>% subset(date >= "2022-03-01" & date <= "2023-02-28") %>%
+  summarise(period3_rainfall = sum(`Rainfall amount (millimetres)`, na.rm = TRUE))
 climate_diff <- within(climate_diff, period_ppt_by_month[Period == '1' & Site == 'BOF'] <- bof_ppt_period1)
 climate_diff <- within(climate_diff, period_ppt_by_month[Period == '2' & Site == 'BOF'] <- bof_ppt_period2)
+climate_diff <- within(climate_diff, period_ppt_by_month[Period == '3' & Site == 'BOF'] <- bof_ppt_period3)
 
 # Some of these values are quite different - amount of rainfall that
 # fell over exact dates and that fell at the monthly scale
@@ -307,51 +344,72 @@ epf_pet_period1 <- epf_evapo %>% subset(date >= "2020-02-01" & date <= "2021-01-
   summarise(period1_pet = sum(evapotranspiration_mm, na.rm=TRUE))
 epf_pet_period2 <- epf_evapo %>% subset(date >= "2021-03-01" & date <= "2022-02-28") %>%
   summarise(period2_pet = sum(evapotranspiration_mm, na.rm=TRUE))
+epf_pet_period3 <- epf_evapo %>% subset(date >= "2022-03-01" & date <= "2023-02-28") %>%
+  summarise(period3_pet = sum(evapotranspiration_mm, na.rm=TRUE))
 climate_diff <- within(climate_diff, period_pet_by_month[Period == '1' & Site == 'EPF'] <- epf_pet_period1)
 climate_diff <- within(climate_diff, period_pet_by_month[Period == '2' & Site == 'EPF'] <- epf_pet_period2)
+climate_diff <- within(climate_diff, period_pet_by_month[Period == '3' & Site == 'EPF'] <- epf_pet_period3)
 ## TMP
 tmp_pet_period1 <- tmp_evapo %>% subset(date >= "2020-02-01" & date <= "2021-02-28") %>%
   summarise(period1_pet = sum(evapotranspiration_mm, na.rm=TRUE))
 tmp_pet_period2 <- tmp_evapo %>% subset(date >= "2021-03-01" & date <= "2022-01-31") %>%
   summarise(period2_pet = sum(evapotranspiration_mm, na.rm=TRUE))
+tmp_pet_period3 <- tmp_evapo %>% subset(date >= "2022-02-01" & date <= "2023-02-28") %>%
+  summarise(period3_pet = sum(evapotranspiration_mm, na.rm = TRUE))
 climate_diff <- within(climate_diff, period_pet_by_month[Period == '1' & Site == 'TMP'] <- tmp_pet_period1)
 climate_diff <- within(climate_diff, period_pet_by_month[Period == '2' & Site == 'TMP'] <- tmp_pet_period2)
+climate_diff <- within(climate_diff, period_pet_by_month[Period == '3' & Site == 'TMP'] <- tmp_pet_period3)
 ## MER
 #Uses same dataset as DOG for evapotranspiration
 mer_pet_period1 <- dog_evapo %>% subset(date >= "2020-02-01" & date <= "2021-01-31") %>%
   summarise(period1_pet = sum(evapotranspiration_mm, na.rm = TRUE))
 mer_pet_period2 <- dog_evapo %>% subset(date >= "2021-02-01" & date <= "2022-02-28") %>%
   summarise(period2_pet = sum(evapotranspiration_mm, na.rm = TRUE))
+mer_pet_period3 <- dog_evapo %>% subset(date >= "2022-03-01" & date <= "2023-02-28") %>%
+  summarise(period3_pet = sum(evapotranspiration_mm, na.rm = TRUE))
 climate_diff <- within(climate_diff, period_pet_by_month[Period == '1' & Site == 'MER'] <- mer_pet_period1)
 climate_diff <- within(climate_diff, period_pet_by_month[Period == '2' & Site == 'MER'] <- mer_pet_period2)
+climate_diff <- within(climate_diff, period_pet_by_month[Period == '3' & Site == 'MER'] <- mer_pet_period3)
 ## DOG
 dog_pet_period1 <- dog_evapo %>% subset(date >= "2020-02-01" & date <= "2021-01-31") %>%
   summarise(period1_pet = sum(evapotranspiration_mm, na.rm = TRUE))
 dog_pet_period2 <- dog_evapo %>% subset(date >= "2021-02-01" & date <= "2022-02-28") %>%
   summarise(period2_pet = sum(evapotranspiration_mm, na.rm = TRUE))
+dog_pet_period3 <- dog_evapo %>% subset(date >= "2022-03-01" & date <= "2023-02-28") %>%
+  summarise(period3_pet = sum(evapotranspiration_mm, na.rm = TRUE))
 climate_diff <- within(climate_diff, period_pet_by_month[Period == '1' & Site == 'DOG'] <- dog_pet_period1)
 climate_diff <- within(climate_diff, period_pet_by_month[Period == '2' & Site == 'DOG'] <- dog_pet_period2)
+climate_diff <- within(climate_diff, period_pet_by_month[Period == '3' & Site == 'DOG'] <- dog_pet_period3)
 ## GRA
 gra_pet_period1 <- gra_evapo %>% subset(date >= "2020-02-01" & date <= "2021-01-31") %>%
   summarise(period1_pet = sum(evapotranspiration_mm, na.rm = TRUE))
 gra_pet_period2 <- gra_evapo %>% subset(date >= "2021-02-01" & date <= "2022-01-31") %>%
   summarise(period2_pet = sum(evapotranspiration_mm, na.rm = TRUE))
+gra_pet_period3 <- gra_evapo %>% subset(date >= "2022-02-01" & date <= "2023-02-28") %>%
+  summarise(period3_pet = sum(evapotranspiration_mm, na.rm = TRUE))
 climate_diff <- within(climate_diff, period_pet_by_month[Period == '1' & Site == 'GRA'] <- gra_pet_period1)
 climate_diff <- within(climate_diff, period_pet_by_month[Period == '2' & Site == 'GRA'] <- gra_pet_period2)
+climate_diff <- within(climate_diff, period_pet_by_month[Period == '3' & Site == 'GRA'] <- gra_pet_period3)
 ## FREY
 frey_pet_period1 <- frey_evapo %>% subset(date >= "2020-02-01" & date <= "2021-02-28") %>%
   summarise(period1_pet = sum(evapotranspiration_mm, na.rm = TRUE))
 frey_pet_period2 <- frey_evapo %>% subset(date >= "2021-03-01" & date <= "2022-02-28") %>%
   summarise(period2_pet = sum(evapotranspiration_mm, na.rm = TRUE))
+frey_pet_period3 <- frey_evapo %>% subset(date >= "2022-03-01" & date <= "2023-02-28") %>%
+  summarise(period3_pet = sum(evapotranspiration_mm, na.rm = TRUE))
 climate_diff <- within(climate_diff, period_pet_by_month[Period == '1' & Site == 'FREY'] <- frey_pet_period1)
 climate_diff <- within(climate_diff, period_pet_by_month[Period == '2' & Site == 'FREY'] <- frey_pet_period2)
+climate_diff <- within(climate_diff, period_pet_by_month[Period == '3' & Site == 'FREY'] <- frey_pet_period3)
 ## BOF
 bof_pet_period1 <- bof_evapo %>% subset(date >= "2020-06-01" & date <= "2021-01-31") %>%
   summarise(period1_pet = sum(evapotranspiration_mm, na.rm = TRUE))
 bof_pet_period2 <- bof_evapo %>% subset(date >= "2021-02-01" & date <= "2022-02-28") %>%
   summarise(period2_pet = sum(evapotranspiration_mm, na.rm = TRUE))
+bof_pet_period3 <- bof_evapo %>% subset(date >= "2022-03-01" & date <= "2023-02-28") %>%
+  summarise(period3_pet = sum(evapotranspiration_mm, na.rm = TRUE))
 climate_diff <- within(climate_diff, period_pet_by_month[Period == '1' & Site == 'BOF'] <- bof_pet_period1)
 climate_diff <- within(climate_diff, period_pet_by_month[Period == '2' & Site == 'BOF'] <- bof_pet_period2)
+climate_diff <- within(climate_diff, period_pet_by_month[Period == '3' & Site == 'BOF'] <- bof_pet_period3)
 
 #Calculate monthly period moisture deficit 
 climate_diff$period_pet_by_month <- as.numeric(climate_diff$period_pet_by_month)
@@ -361,18 +419,22 @@ climate_diff <- climate_diff %>% mutate(monthly_period_md = period_pet_by_month 
 ## Simplify dataset
 climate_diff <- climate_diff %>% dplyr::select(Site, Period, norm_md, monthly_period_md)
 
+
+## Calculate anomaly!
+climate_diff <- climate_diff %>% mutate(anomaly = monthly_period_md-norm_md)
+
 ## Plot them
 # ggplot(climate_diff, aes (x = norm_md, y = monthly_period_md, colour = Site))+
 #   geom_point(cex=2, alpha =0.8)+
 #   theme_classic()
-# 
+# # 
 # ggplot(climate_diff, aes (x = Site, y = norm_md, colour = Period))+
-# geom_point(cex=3, alpha =0.4)+
+# geom_jitter(cex=3, alpha =0.4)+
 #   theme_classic()
 
-## Calculate anomaly!
-#Check that these negatives make sense
-climate_diff <- climate_diff %>% mutate(anomaly = monthly_period_md-norm_md)
+# ggplot(climate_diff, aes (x = Site, y = anomaly, colour = Period))+
+#   geom_jitter(cex=3, alpha =0.4)+
+ # theme_classic()
 
 ## How to calculate this as a proportion?
 #problem: -500/-300 = 1.6, and 500/300 = 1.6 but opposite scenarios (1.6x wetter, 1.6x drier)
@@ -381,10 +443,6 @@ climate_diff <- climate_diff %>% mutate(anomaly = monthly_period_md-norm_md)
 # some useful info
 #Could I write something that says if period value < norm value, add negative sign?
 #Don't need it to be a proportion for the analysis
-
-# ggplot(climate_diff, aes (x = Site, y = anomaly, colour = Period))+
-#   geom_point(cex=3, alpha =0.4)+
-#   theme_classic()
 
 #Resetting this function
 select <- dplyr::select
