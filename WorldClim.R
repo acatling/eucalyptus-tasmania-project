@@ -149,23 +149,25 @@ ResTas$PPT <- extract(x=Tas_PPT, y= cbind(ResTas$Centred_Long,ResTas$Centred_Lat
 ResTas$PET <- extract(x=Tas_PET, y= cbind(ResTas$Centred_Long,ResTas$Centred_Lat))
 ResTas$CMD <- extract(x=Tas_CMD, y= cbind(ResTas$Centred_Long,ResTas$Centred_Lat))
 
+#with old lats and longs - very similar.
+# ResTas$AI_old <- extract(x=Tas_AIreal, y= cbind(ResTas$Old_Long,ResTas$Old_Lat))
+# ResTas$PPT_old <- extract(x=Tas_PPT, y= cbind(ResTas$Old_Long,ResTas$Old_Lat))
+# ResTas$PET_old <- extract(x=Tas_PET, y= cbind(ResTas$Old_Long,ResTas$Old_Lat))
+# ResTas$CMD_old <- extract(x=Tas_CMD, y= cbind(ResTas$Old_Long,ResTas$Old_Lat))
+
 ### These are the annual features of the site (PPT, PET, CMD)
 simpleResTas <- ResTas %>% dplyr::select(Site, PPT, PET, CMD)
 
 ### Look at the extracted values
-#par(mfrow=c(1,1))
 #plot(Tas_CMD, main="CMD (PET-PPT)")
-##Size is based on aridity index!
-#points(Lat~Long, ResTas, pch=16, cex=AI, col='red')
+#Size is based on aridity index!
+#points(Centred_Lat~Centred_Long, ResTas, pch=16, cex=AI, col='red')
 
 #### plotting just tasman peninsula
 #plot(Tas_CMD, xlim=c(147.5,148.5), ylim=c(-43.5, -42.5))
 
 #### Calculating period climate anomaly ####
 # By site and by month
-#Make a long dataframe with:
-#Site | Period | md_norm | md_period | proportion
-# proportion = md_period/md_norm
 
 #md_norm is agnostic to year, but calculated as an average per month
 #md_period matters which year
@@ -186,18 +188,18 @@ dates_growth_site <- read_csv("Data/dates_monthly_period_growth.csv")
 ResTasMonthly <- read_csv("Data/site_coords_updated.csv")
 #Can't have any extra columns because it will interfere with MD calculations below
 ResTasMonthly <- ResTasMonthly %>% dplyr::select(Site, Centred_Lat, Centred_Long)
-ResTasMonthly$CMD_1b <- raster::extract(x=tas_md1, y= cbind(ResTas$Centred_Long,ResTas$Centred_Lat))
-ResTasMonthly$CMD_2b <- raster::extract(x=tas_md2, y= cbind(ResTas$Centred_Long,ResTas$Centred_Lat))
-ResTasMonthly$CMD_3b <- raster::extract(x=tas_md3, y= cbind(ResTas$Centred_Long,ResTas$Centred_Lat))
-ResTasMonthly$CMD_4b <- raster::extract(x=tas_md4, y= cbind(ResTas$Centred_Long,ResTas$Centred_Lat))
-ResTasMonthly$CMD_5b <- raster::extract(x=tas_md5, y= cbind(ResTas$Centred_Long,ResTas$Centred_Lat))
-ResTasMonthly$CMD_6b <- raster::extract(x=tas_md6, y= cbind(ResTas$Centred_Long,ResTas$Centred_Lat))
-ResTasMonthly$CMD_7b <- raster::extract(x=tas_md7, y= cbind(ResTas$Centred_Long,ResTas$Centred_Lat))
-ResTasMonthly$CMD_8b <- raster::extract(x=tas_md8, y= cbind(ResTas$Centred_Long,ResTas$Centred_Lat))
-ResTasMonthly$CMD_9b <- raster::extract(x=tas_md9, y= cbind(ResTas$Centred_Long,ResTas$Centred_Lat))
-ResTasMonthly$CMD_10b <- raster::extract(x=tas_md10, y= cbind(ResTas$Centred_Long,ResTas$Centred_Lat))
-ResTasMonthly$CMD_11b <- raster::extract(x=tas_md11, y= cbind(ResTas$Centred_Long,ResTas$Centred_Lat))
-ResTasMonthly$CMD_12b <- raster::extract(x=tas_md12, y= cbind(ResTas$Centred_Long,ResTas$Centred_Lat))
+ResTasMonthly$CMD_1 <- raster::extract(x=tas_md1, y= cbind(ResTas$Centred_Long,ResTas$Centred_Lat))
+ResTasMonthly$CMD_2 <- raster::extract(x=tas_md2, y= cbind(ResTas$Centred_Long,ResTas$Centred_Lat))
+ResTasMonthly$CMD_3 <- raster::extract(x=tas_md3, y= cbind(ResTas$Centred_Long,ResTas$Centred_Lat))
+ResTasMonthly$CMD_4 <- raster::extract(x=tas_md4, y= cbind(ResTas$Centred_Long,ResTas$Centred_Lat))
+ResTasMonthly$CMD_5 <- raster::extract(x=tas_md5, y= cbind(ResTas$Centred_Long,ResTas$Centred_Lat))
+ResTasMonthly$CMD_6 <- raster::extract(x=tas_md6, y= cbind(ResTas$Centred_Long,ResTas$Centred_Lat))
+ResTasMonthly$CMD_7 <- raster::extract(x=tas_md7, y= cbind(ResTas$Centred_Long,ResTas$Centred_Lat))
+ResTasMonthly$CMD_8 <- raster::extract(x=tas_md8, y= cbind(ResTas$Centred_Long,ResTas$Centred_Lat))
+ResTasMonthly$CMD_9 <- raster::extract(x=tas_md9, y= cbind(ResTas$Centred_Long,ResTas$Centred_Lat))
+ResTasMonthly$CMD_10 <- raster::extract(x=tas_md10, y= cbind(ResTas$Centred_Long,ResTas$Centred_Lat))
+ResTasMonthly$CMD_11 <- raster::extract(x=tas_md11, y= cbind(ResTas$Centred_Long,ResTas$Centred_Lat))
+ResTasMonthly$CMD_12 <- raster::extract(x=tas_md12, y= cbind(ResTas$Centred_Long,ResTas$Centred_Lat))
 
 # import Site and Period table so that I can assign period values directly
 site_period <- period_climate %>% dplyr::select(Site, Period)
@@ -205,7 +207,6 @@ climate_diff <- left_join(ResTasMonthly, site_period)
 
 ## Summing them for each site based on growth period (dates_growth_site)
 #From first month (including) to second month (excluding)
-#Column 4 is January, 15 is December
 climate_diff$norm_md <- 123
 
 #Period 1 first:
@@ -214,31 +215,40 @@ climate_diff$norm_md <- 123
 # because it is one year 
 #4 is Jan, 5 is Feb, 6 is March, 7 Apr, 8 May, 9 Jun, 10 Jul, 11 Aug, 12 Sep, 13 Oct, 14 Nov, 15 Dec
 #First line is saying sum feb to december + jan 
+
+#GRA
+# gra_ppt_period1 <- bom_gra %>% subset(date >= "2020-02-01" & date <= "2021-01-31") %>%
+#   summarise(period1_rainfall = sum(`Rainfall amount (millimetres)`, na.rm = TRUE))
+# gra_ppt_period2 <- bom_gra %>% subset(date >= "2021-02-01" & date <= "2022-01-31") %>%
+#   summarise(period2_rainfall = sum(`Rainfall amount (millimetres)`, na.rm = TRUE))
+# gra_ppt_period3 <- bom_gra %>% subset(date >= "2022-02-01" & date <= "2023-02-28") %>%
+#   summarise(period3_rainfall = sum(`Rainfall amount (millimetres)`, na.rm = TRUE))
+
 climate_diff$norm_md[climate_diff$Site=="EPF" & climate_diff$Period == 1] <- sum(climate_diff[1,5:15], climate_diff[1,4])
-climate_diff$norm_md[climate_diff$Site=="TMP" & climate_diff$Period == 1] <- sum(climate_diff[3,5:15], climate_diff[3,4:5])
-climate_diff$norm_md[climate_diff$Site=="MER" & climate_diff$Period == 1] <- sum(climate_diff[5,5:15], climate_diff[5,4])
-climate_diff$norm_md[climate_diff$Site=="DOG" & climate_diff$Period == 1] <- sum(climate_diff[7,5:15], climate_diff[7,4])
-climate_diff$norm_md[climate_diff$Site=="GRA" & climate_diff$Period == 1] <- sum(climate_diff[9,5:15], climate_diff[9,4])
-climate_diff$norm_md[climate_diff$Site=="FREY" & climate_diff$Period == 1] <- sum(climate_diff[11,5:15], climate_diff[11,4:5])
-climate_diff$norm_md[climate_diff$Site=="BOF" & climate_diff$Period == 1] <- sum(climate_diff[13,9:15], climate_diff[13,4])
+climate_diff$norm_md[climate_diff$Site=="TMP" & climate_diff$Period == 1] <- sum(climate_diff[4,5:15], climate_diff[4,4:5])
+climate_diff$norm_md[climate_diff$Site=="MER" & climate_diff$Period == 1] <- sum(climate_diff[7,5:15], climate_diff[7,4])
+climate_diff$norm_md[climate_diff$Site=="DOG" & climate_diff$Period == 1] <- sum(climate_diff[10,5:15], climate_diff[10,4])
+climate_diff$norm_md[climate_diff$Site=="GRA" & climate_diff$Period == 1] <- sum(climate_diff[13,5:15], climate_diff[13,4])
+climate_diff$norm_md[climate_diff$Site=="FREY" & climate_diff$Period == 1] <- sum(climate_diff[16,5:15], climate_diff[16,4:5])
+climate_diff$norm_md[climate_diff$Site=="BOF" & climate_diff$Period == 1] <- sum(climate_diff[19,9:15], climate_diff[19,4])
 
 #Period 2
-climate_diff$norm_md[climate_diff$Site=="EPF" & climate_diff$Period == 2] <- sum(climate_diff[1,6:15], climate_diff[1,4:5])
-climate_diff$norm_md[climate_diff$Site=="TMP" & climate_diff$Period == 2] <- sum(climate_diff[3,6:15], climate_diff[3,4])
-climate_diff$norm_md[climate_diff$Site=="MER" & climate_diff$Period == 2] <- sum(climate_diff[5,5:15], climate_diff[5,4:5])
-climate_diff$norm_md[climate_diff$Site=="DOG" & climate_diff$Period == 2] <- sum(climate_diff[7,5:15], climate_diff[7,4:5])
-climate_diff$norm_md[climate_diff$Site=="GRA" & climate_diff$Period == 2] <- sum(climate_diff[9,5:15], climate_diff[9,4])
-climate_diff$norm_md[climate_diff$Site=="FREY" & climate_diff$Period == 2] <- sum(climate_diff[11,6:15], climate_diff[11,4:5])
-climate_diff$norm_md[climate_diff$Site=="BOF" & climate_diff$Period == 2] <- sum(climate_diff[13,5:15], climate_diff[13,4:5])
+climate_diff$norm_md[climate_diff$Site=="EPF" & climate_diff$Period == 2] <- sum(climate_diff[2,6:15], climate_diff[2,4:5])
+climate_diff$norm_md[climate_diff$Site=="TMP" & climate_diff$Period == 2] <- sum(climate_diff[5,6:15], climate_diff[5,4])
+climate_diff$norm_md[climate_diff$Site=="MER" & climate_diff$Period == 2] <- sum(climate_diff[8,5:15], climate_diff[8,4:5])
+climate_diff$norm_md[climate_diff$Site=="DOG" & climate_diff$Period == 2] <- sum(climate_diff[11,5:15], climate_diff[11,4:5])
+climate_diff$norm_md[climate_diff$Site=="GRA" & climate_diff$Period == 2] <- sum(climate_diff[14,5:15], climate_diff[14,4])
+climate_diff$norm_md[climate_diff$Site=="FREY" & climate_diff$Period == 2] <- sum(climate_diff[17,6:15], climate_diff[17,4:5])
+climate_diff$norm_md[climate_diff$Site=="BOF" & climate_diff$Period == 2] <- sum(climate_diff[20,5:15], climate_diff[20,4:5])
 
 #Period 3
-climate_diff$norm_md[climate_diff$Site=="EPF" & climate_diff$Period == 3] <- sum(climate_diff[1,6:15], climate_diff[1,4:5])
-climate_diff$norm_md[climate_diff$Site=="TMP" & climate_diff$Period == 3] <- sum(climate_diff[3,5:15], climate_diff[3,4:5])
-climate_diff$norm_md[climate_diff$Site=="MER" & climate_diff$Period == 3] <- sum(climate_diff[5,6:15], climate_diff[5,4:5])
-climate_diff$norm_md[climate_diff$Site=="DOG" & climate_diff$Period == 3] <- sum(climate_diff[7,6:15], climate_diff[7,4:5])
-climate_diff$norm_md[climate_diff$Site=="GRA" & climate_diff$Period == 3] <- sum(climate_diff[9,5:15], climate_diff[9,4:5])
-climate_diff$norm_md[climate_diff$Site=="FREY" & climate_diff$Period == 3] <- sum(climate_diff[11,6:15], climate_diff[11,4:5])
-climate_diff$norm_md[climate_diff$Site=="BOF" & climate_diff$Period == 3] <- sum(climate_diff[13,6:15], climate_diff[13,4:5])
+climate_diff$norm_md[climate_diff$Site=="EPF" & climate_diff$Period == 3] <- sum(climate_diff[3,6:15], climate_diff[3,4:5])
+climate_diff$norm_md[climate_diff$Site=="TMP" & climate_diff$Period == 3] <- sum(climate_diff[6,5:15], climate_diff[6,4:5])
+climate_diff$norm_md[climate_diff$Site=="MER" & climate_diff$Period == 3] <- sum(climate_diff[9,6:15], climate_diff[9,4:5])
+climate_diff$norm_md[climate_diff$Site=="DOG" & climate_diff$Period == 3] <- sum(climate_diff[12,6:15], climate_diff[12,4:5])
+climate_diff$norm_md[climate_diff$Site=="GRA" & climate_diff$Period == 3] <- sum(climate_diff[15,5:15], climate_diff[15,4:5])
+climate_diff$norm_md[climate_diff$Site=="FREY" & climate_diff$Period == 3] <- sum(climate_diff[18,6:15], climate_diff[18,4:5])
+climate_diff$norm_md[climate_diff$Site=="BOF" & climate_diff$Period == 3] <- sum(climate_diff[21,6:15], climate_diff[21,4:5])
 
 climate_diff <- climate_diff %>% dplyr::select(Site, Period, norm_md)
 
@@ -334,9 +344,6 @@ climate_diff <- within(climate_diff, period_ppt_by_month[Period == '3' & Site ==
 # Some of these values are quite different - amount of rainfall that
 # fell over exact dates and that fell at the monthly scale
 #not a problem
-#test <- period_climate %>% dplyr::select(Site, Period, period_rainfall)
-#test2 <- climate_diff %>% dplyr::select(Site, Period, period_ppt_by_month)
-#test3 <- left_join(test, test2)
 
 #### Now for evapotranspiration
 ## EPF

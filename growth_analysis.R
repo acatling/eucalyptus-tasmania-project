@@ -9,6 +9,7 @@ library(kableExtra)
 library(sf)
 library(ggrepel)
 library(ggfortify)
+library(emmeans)
 
 #### Plots of soil ####
 ## Plotting growth rate responses to PC1 and PC2
@@ -73,13 +74,16 @@ hist(growthnbhdata$inter_nci)
 hist(log(growthnbhdata$inter_nci))
 
 #### Is initial DBH evenly distributed across species? ####
-# There are two trees that I have growth data for but no initial DBH measurements - "UN"
-# Have to remove these
-# dbhnumeric <- growthnbhdata %>% filter(DBH_cm != "UN") %>% 
-#   group_by(Site, Focal_sp, Plot, Tree) %>% filter(row_number() == 1)
-# dbhnumeric$DBH_cm <- as.numeric(dbhnumeric$DBH_cm)
+#This is now preceding_dbh, need to update to run - filtering to period 1
+period1data <- growthnbhdata %>% filter(Period == 1)
+hist(period1data$preceding_dbh)
 
-#This is now preceding_dbh, need to update to run*
+dbhmod <- lm(preceding_dbh ~ Focal_sp, period1data)
+dharma <- simulateResiduals(dbhmod)
+plot(dharma)
+summary(dbhmod)
+emmeans(dbhmod, list(pairwise ~ Focal_sp), adjust="tukey")
+
 
 ggplot(onerowdata, aes(x = Focal_sp, y = sqrt(preceding_dbh)))+
   geom_boxplot()+
@@ -175,6 +179,7 @@ meangrowth <- growthnbhdata %>%
             mean_growth_rate_period3 = mean(growth_rate[Period == 3]),
             sd_growth_rate_period3 = sd(growth_rate[Period == 3]))
 
+#growthnbhdata %>% filter(Period == 3) %>%
 ggplot(growthnbhdata, aes(x = Focal_sp, y = sqrt(growth_rate)))+
   geom_boxplot()+
   geom_jitter(aes(colour = Period), width = 0.2, alpha = 0.5)+
@@ -191,21 +196,36 @@ TukeyHSD(modelgr1)
 #E. viminalis grows at a significantly faster rate than other species
 # E. amygdalina, E. ovata and E. obliqua all grow at similar rates
 
+##LMMs
+#keeping PC1 as covariate
+growthmod <- lmer(sqrt(growth_rate) ~ Focal_sp + std_PC1 + (1|Site/Plot/Tree), growthnbhdata)
+dharma <- simulateResiduals(growthmod)
+#pretty terrible residuals
+plot(dharma)
+summary(growthmod)
+emmeans(growthmod, list(pairwise ~ Focal_sp), adjust="tukey")
+
 modelgr2 <- lm(sqrt(growth_rate) ~ Focal_sp, growthnbhdata)
 dharma <- simulateResiduals(modelgr2)
 plot(dharma)
 summary(modelgr2)
-hist(sqrt(growthnbhdata$growth_rate))
 emmeans(modelgr2, list(pairwise ~ Focal_sp), adjust="tukey")
 
-#Really unhappy model. Don't trust output... fine as just regular lm or with only tree as RE,
-# site/plot RE that scares it
 modelgr3 <- lmer(sqrt(growth_rate) ~ Focal_sp + (1|Site/Plot/Tree), growthnbhdata)
 dharma <- simulateResiduals(modelgr3)
 plot(dharma)
 summary(modelgr3)
 emmeans(modelgr3, list(pairwise ~ Focal_sp), adjust="tukey")
 
+modelgr4 <- lmer(sqrt(growth_rate) ~ Focal_sp + std_PC1 + std_preceding_dbh + std_total_nci +
+                   std_norm_md + std_anomaly + (1|Site/Plot/Tree), growthnbhdata)
+dharma <- simulateResiduals(modelgr4)
+plot(dharma)
+summary(modelgr4)
+emmeans(modelgr4, list(pairwise ~ Focal_sp), adjust="tukey")
+
+#Compared models with just PC1 covariate, nothing but REs and all covariates
+# and all agree with pairwise comparisons
 
 ## Do growth rates differ by period?
 ggplot(growthnbhdata, aes(x = Period, y = sqrt(growth_rate)))+
@@ -239,11 +259,32 @@ listneighboursbysite <- surveydata %>% group_by(Site, Neighbour_sp_ID) %>% filte
   select(Site, Neighbour_sp_ID)
 #### Do NCI, basal area or density (number of neighbours) vary by site? ####
 ### NCI
-growthnbhdata %>% mutate(Site = fct_reorder(Site, desc(MD))) %>%
+#mean CMD order
+growthnbhdata %>% mutate(Site = fct_reorder(Site, desc(CMD))) %>%
   ggplot(aes(x = Site, y = total_nbh_ba))+
   geom_boxplot()+
   geom_jitter(alpha = 0.4, colour = "dodgerblue")+
   ylab("log(total basal area)")+
+  theme_classic()
+#altogether
+growthnbhdata %>% group_by(Site, Period) %>% filter(row_number()==1) %>% mutate(Site = fct_reorder(Site, desc(CMD))) %>%
+  ggplot(aes(x = Site, y = norm_md))+
+  geom_jitter(aes(colour=Period))+
+  theme_classic()
+#period 1 order
+growthnbhdata %>% filter(Period==1) %>% mutate(Site = fct_reorder(Site, desc(norm_md))) %>%
+  ggplot(aes(x = Site, y = norm_md))+
+  geom_point()+
+  theme_classic()
+#period 2 order
+growthnbhdata %>% filter(Period==2) %>% mutate(Site = fct_reorder(Site, desc(norm_md))) %>%
+  ggplot(aes(x = Site, y = norm_md))+
+  geom_point()+
+  theme_classic()
+#period 3 order
+growthnbhdata %>% filter(Period==3) %>% mutate(Site = fct_reorder(Site, desc(norm_md))) %>%
+  ggplot(aes(x = Site, y = norm_md))+
+  geom_point()+
   theme_classic()
 
 ### BASAL AREA
@@ -401,6 +442,16 @@ ggplot(growthnbhdata, aes(x = daily_md, y = daily_period_md))+
   geom_smooth(method="lm")+
   ylab("daily period md")+
   xlab("daily long-term md")+
+  theme_classic()
+
+ggplot(growthnbhdata, aes(x = norm_md, y= monthly_period_md))+
+  geom_point()+
+  geom_smooth(method='lm')+
+  theme_classic()
+
+ggplot(growthnbhdata, aes(x = norm_md, y= anomaly))+
+  geom_point()+
+  geom_smooth(method='lm')+
   theme_classic()
 
 #### Plot the number of conspecifics and heterospecifics for each sp ####

@@ -100,28 +100,28 @@ E. viminalis,TMP,A,2,17,1.4,,-43.14176702,147.958657,"Not sure on ID, no capsule
 E. amygdalina,MER,A,1,42.8,1.4,,-41.57689302,146.24924,
 E. amygdalina,MER,A,2,20,1.4,,-41.57620998,146.248721,
 E. amygdalina,MER,A,3,35.1,1.4,,-41.57686897,146.24877,
-E. amygdalina,MER,B,1,44.4,1.4,,-41.53546496,146.319614,Dogs Head
-E. amygdalina,MER,B,2,33,1.4,,-41.53550201,146.319994,Dogs Head
-E. amygdalina,MER,B,3,23,1.4,,-41.53532901,146.320151,Dogs Head
-E. amygdalina,MER,B,4,59.7,1.4,,-41.53450599,146.32042,Dogs Head
-E. amygdalina,MER,B,5,30.4,1.4,,-41.534579,146.319925,Dogs Head
-E. amygdalina,MER,B,6,31.3,1.4,,-41.53526497,146.321512,Dogs Head
-E. amygdalina,MER,B,7,55.1,1.4,,-41.53645302,146.317686,"Made a mistake with GPS and book labelling (wrote B6 twice, so this is truly B7); Dogs Head"
-E. amygdalina,MER,B,8,34.7,1.4,,-41.53586403,146.31926,"Made a mistake with GPS and book labelling (wrote B6 twice, so this is truly B8); Dogs Head"
-E. amygdalina,MER,C,1,40.6,1.4,,-41.53900699,146.325626,Dogs Head
-E. amygdalina,MER,C,2,50,1.4,,-41.538577,146.325236,Dogs Head
-E. amygdalina,MER,C,3,27.3,1.4,,-41.53944402,146.32533,Dogs Head
-E. amygdalina,MER,C,4,41.3,1.4,,-41.53903901,146.323567,Dogs Head
-E. amygdalina,MER,C,5,56.5,1.4,,-41.53872401,146.323532,Dogs Head
-E. amygdalina,MER,C,6,33,1.4,,-41.54072503,146.324914,Dogs Head
-E. amygdalina,MER,C,7,23.5,1.4,,-41.54095201,146.322998,Dogs Head
-E. amygdalina,MER,D,1,18.7,1.4,,-41.54505604,146.328022,Dogs Head
-E. amygdalina,MER,D,2,25.2,1.45,,-41.54436504,146.328893,Dogs Head; DBH at 1.35
-E. amygdalina,MER,D,3,15.8,1.4,,-41.544,146.33043,Dogs Head
-E. amygdalina,MER,D,4,56.3,1.4,,-41.54387402,146.330807,Dogs Head
-E. amygdalina,MER,D,5,42.2,1.4,,-41.54349701,146.330647,Dogs Head
-E. amygdalina,MER,D,6,50.1,1.4,,-41.54457701,146.329961,Dogs Head
-E. amygdalina,MER,D,7,26.7,1.4,,-41.54271397,146.330811,Dogs Head
+E. amygdalina,DOG,B,1,44.4,1.4,,-41.53546496,146.319614,Dogs Head
+E. amygdalina,DOG,B,2,33,1.4,,-41.53550201,146.319994,Dogs Head
+E. amygdalina,DOG,B,3,23,1.4,,-41.53532901,146.320151,Dogs Head
+E. amygdalina,DOG,B,4,59.7,1.4,,-41.53450599,146.32042,Dogs Head
+E. amygdalina,DOG,B,5,30.4,1.4,,-41.534579,146.319925,Dogs Head
+E. amygdalina,DOG,B,6,31.3,1.4,,-41.53526497,146.321512,Dogs Head
+E. amygdalina,DOG,B,7,55.1,1.4,,-41.53645302,146.317686,"Made a mistake with GPS and book labelling (wrote B6 twice, so this is truly B7); Dogs Head"
+E. amygdalina,DOG,B,8,34.7,1.4,,-41.53586403,146.31926,"Made a mistake with GPS and book labelling (wrote B6 twice, so this is truly B8); Dogs Head"
+E. amygdalina,DOG,C,1,40.6,1.4,,-41.53900699,146.325626,Dogs Head
+E. amygdalina,DOG,C,2,50,1.4,,-41.538577,146.325236,Dogs Head
+E. amygdalina,DOG,C,3,27.3,1.4,,-41.53944402,146.32533,Dogs Head
+E. amygdalina,DOG,C,4,41.3,1.4,,-41.53903901,146.323567,Dogs Head
+E. amygdalina,DOG,C,5,56.5,1.4,,-41.53872401,146.323532,Dogs Head
+E. amygdalina,DOG,C,6,33,1.4,,-41.54072503,146.324914,Dogs Head
+E. amygdalina,DOG,C,7,23.5,1.4,,-41.54095201,146.322998,Dogs Head
+E. amygdalina,DOG,D,1,18.7,1.4,,-41.54505604,146.328022,Dogs Head
+E. amygdalina,DOG,D,2,25.2,1.45,,-41.54436504,146.328893,Dogs Head; DBH at 1.35
+E. amygdalina,DOG,D,3,15.8,1.4,,-41.544,146.33043,Dogs Head
+E. amygdalina,DOG,D,4,56.3,1.4,,-41.54387402,146.330807,Dogs Head
+E. amygdalina,DOG,D,5,42.2,1.4,,-41.54349701,146.330647,Dogs Head
+E. amygdalina,DOG,D,6,50.1,1.4,,-41.54457701,146.329961,Dogs Head
+E. amygdalina,DOG,D,7,26.7,1.4,,-41.54271397,146.330811,Dogs Head
 E. obliqua,MER,A,1,25.4,1.4,,-41.57611099,146.249112,
 E. obliqua,MER,B,1,29.4,1.4,,-41.59051001,146.237701,
 E. obliqua,MER,B,2,36.7,1.4,,-41.59012704,146.237874,
@@ -130,56 +130,56 @@ E. obliqua,MER,B,4,39.6,1.4,,-41.59051596,146.23721,
 E. obliqua,MER,C,1,28.4,1.4,,-41.586323,146.244637,
 E. obliqua,MER,C,2,50.3,1.4,,-41.58582201,146.244631,Not sure of ID
 E. obliqua,MER,C,3,29.8,1.4,,-41.58569704,146.244743,Not sure ID
-E. obliqua,MER,D,1,48.7,1.4,,-41.53522901,146.319835,Dogs Head; did not find nuts
-E. obliqua,MER,D,2,30.3,1.4,,-41.53597903,146.320536,Dogs Head
-E. obliqua,MER,D,3,36,1.4,,-41.53571399,146.320974,Dogs Head
-E. obliqua,MER,D,4,24.1,1.4,,-41.53548902,146.321156,Dogs Head
-E. obliqua,MER,D,5,45.7,1.4,,-41.53508501,146.321373,Dogs Head
-E. obliqua,MER,D,6,54.9,1.4,,-41.53628899,146.318907,Dogs Head
-E. obliqua,MER,D,7,31.9,1.4,,-41.53580803,146.318784,Dogs Head
-E. obliqua,MER,D,8,57.4,1.4,,-41.53588003,146.317918,Dogs Head
-E. obliqua,MER,D,9,42,1.4,,-41.53647297,146.317269,Dogs Head
-E. obliqua,MER,E,1,25.6,1.4,,-41.53990896,146.325149,Dogs Head
-E. obliqua,MER,E,2,47.7,1.4,,-41.53976798,146.324625,Dogs Head
-E. obliqua,MER,E,3,50.2,1.4,,-41.54013804,146.324663,Dogs Head; Accidentally wrote D3 on tree
-E. obliqua,MER,E,4,39.5,1.4,,-41.54034499,146.324087,Dogs Head
-E. obliqua,MER,E,5,56.9,1.4,,-41.54047399,146.323465,GPS label incorrectly says 'C5OB'; Dogs Head
-E. obliqua,MER,E,6,49.6,1.4,,-41.54083801,146.324236,Dogs Head
-E. obliqua,MER,E,7,36.7,1.4,,-41.54107396,146.324364,Dogs Head
-E. obliqua,MER,E,8,28.4,1.4,,-41.54115602,146.324839,Dogs Head
-E. obliqua,MER,F,1,54,1.4,,-41.54433,146.328444,Dogs Head
-E. obliqua,MER,F,2,45,1.4,,-41.54431801,146.330137,Dogs Head
-E. obliqua,MER,F,3,47.1,1.4,,-41.54379297,146.329961,Dogs Head
-E. obliqua,MER,F,4,58.8,1.4,,-41.54251498,146.331047,Dogs Head
+E. obliqua,DOG,D,1,48.7,1.4,,-41.53522901,146.319835,Dogs Head; did not find nuts
+E. obliqua,DOG,D,2,30.3,1.4,,-41.53597903,146.320536,Dogs Head
+E. obliqua,DOG,D,3,36,1.4,,-41.53571399,146.320974,Dogs Head
+E. obliqua,DOG,D,4,24.1,1.4,,-41.53548902,146.321156,Dogs Head
+E. obliqua,DOG,D,5,45.7,1.4,,-41.53508501,146.321373,Dogs Head
+E. obliqua,DOG,D,6,54.9,1.4,,-41.53628899,146.318907,Dogs Head
+E. obliqua,DOG,D,7,31.9,1.4,,-41.53580803,146.318784,Dogs Head
+E. obliqua,DOG,D,8,57.4,1.4,,-41.53588003,146.317918,Dogs Head
+E. obliqua,DOG,D,9,42,1.4,,-41.53647297,146.317269,Dogs Head
+E. obliqua,DOG,E,1,25.6,1.4,,-41.53990896,146.325149,Dogs Head
+E. obliqua,DOG,E,2,47.7,1.4,,-41.53976798,146.324625,Dogs Head
+E. obliqua,DOG,E,3,50.2,1.4,,-41.54013804,146.324663,Dogs Head; Accidentally wrote D3 on tree
+E. obliqua,DOG,E,4,39.5,1.4,,-41.54034499,146.324087,Dogs Head
+E. obliqua,DOG,E,5,56.9,1.4,,-41.54047399,146.323465,GPS label incorrectly says 'C5OB'; Dogs Head
+E. obliqua,DOG,E,6,49.6,1.4,,-41.54083801,146.324236,Dogs Head
+E. obliqua,DOG,E,7,36.7,1.4,,-41.54107396,146.324364,Dogs Head
+E. obliqua,DOG,E,8,28.4,1.4,,-41.54115602,146.324839,Dogs Head
+E. obliqua,DOG,F,1,54,1.4,,-41.54433,146.328444,Dogs Head
+E. obliqua,DOG,F,2,45,1.4,,-41.54431801,146.330137,Dogs Head
+E. obliqua,DOG,F,3,47.1,1.4,,-41.54379297,146.329961,Dogs Head
+E. obliqua,DOG,F,4,58.8,1.4,,-41.54251498,146.331047,Dogs Head
 E. viminalis,MER,A,1,34,1.4,,-41.57656697,146.248938,
 E. viminalis,MER,A,2,49.7,1.4,,-41.576573,146.249412,
 E. viminalis,MER,A,3,23.5,1.4,,-41.57593698,146.249107,
 E. viminalis,MER,B,1,32.9,1.4,,-41.591156,146.237984,
 E. viminalis,MER,B,2,35.3,1.4,,-41.59164601,146.237052,
 E. viminalis,MER,B,3,32,1.4,,-41.59153897,146.238028,
-E. viminalis,MER,B,4,38.2,1.4,,-41.59245302,146.238267,Dogs Head
-E. viminalis,MER,B,5,55.8,1.4,,-41.590811,146.238023,Dogs Head
-E. viminalis,MER,C,1,33.8,1.4,,-41.53478997,146.320689,Dogs Head
-E. viminalis,MER,C,2,24.9,1.4,,-41.53588699,146.320029,Dogs Head
-E. viminalis,MER,C,3,28.8,1.4,,-41.53620902,146.319385,Dogs Head
-E. viminalis,MER,C,4,65.6,1.5,,-41.535127,146.320261,DBH at 1.4 m; Dogs Head
-E. viminalis,MER,C,5,37,1.4,,-41.53436903,146.320848,Dogs Head
-E. viminalis,MER,C,6,34,1.4,,-41.53609998,146.318529,Dogs Head
-E. viminalis,MER,C,7,38.7,1.4,,-41.53583301,146.318258,Dogs Head
-E. viminalis,MER,D,1,30.4,1.4,,-41.538621,146.323201,Dogs Head
-E. viminalis,MER,D,2,37.9,1.4,,-41.53902601,146.324119,Dogs Head
-E. viminalis,MER,D,3,29.9,1.4,,-41.53926901,146.325624,Dogs Head
-E. viminalis,MER,D,4,21.5,1.4,,-41.53993696,146.324256,Very small leaves compared to others; Dogs Head
-E. viminalis,MER,D,5,19,1.4,,-41.540951,146.325418,Dogs Head
-E. viminalis,MER,D,6,56.1,1.4,,-41.53919198,146.324337,Dogs Head
-E. viminalis,MER,D,7,42.8,1.4,,-41.53914403,146.323048,Dogs Head
-E. viminalis,MER,E,1,39.4,1.4,,-41.54475898,146.329185,Dogs Head
-E. viminalis,MER,E,2,55.2,1.4,,-41.54481196,146.328371,Dogs Head
-E. viminalis,MER,E,3,19.5,1.4,,-41.54466896,146.328055,Dogs Head
-E. viminalis,MER,E,4,15.2,1.4,,-41.54421902,146.329598,Dogs Head
-E. viminalis,MER,E,5,40,1.4,,-41.54414903,146.329943,Dogs Head
-E. viminalis,MER,E,6,31.1,1.4,,-41.54333297,146.331194,Dogs Head
-E. viminalis,MER,E,7,28,1.4,,-41.54200201,146.330493,Dogs Head
+E. viminalis,MER,B,4,38.2,1.4,,-41.59245302,146.238267,
+E. viminalis,MER,B,5,55.8,1.4,,-41.590811,146.238023,
+E. viminalis,DOG,C,1,33.8,1.4,,-41.53478997,146.320689,Dogs Head
+E. viminalis,DOG,C,2,24.9,1.4,,-41.53588699,146.320029,Dogs Head
+E. viminalis,DOG,C,3,28.8,1.4,,-41.53620902,146.319385,Dogs Head
+E. viminalis,DOG,C,4,65.6,1.5,,-41.535127,146.320261,DBH at 1.4 m; Dogs Head
+E. viminalis,DOG,C,5,37,1.4,,-41.53436903,146.320848,Dogs Head
+E. viminalis,DOG,C,6,34,1.4,,-41.53609998,146.318529,Dogs Head
+E. viminalis,DOG,C,7,38.7,1.4,,-41.53583301,146.318258,Dogs Head
+E. viminalis,DOG,D,1,30.4,1.4,,-41.538621,146.323201,Dogs Head
+E. viminalis,DOG,D,2,37.9,1.4,,-41.53902601,146.324119,Dogs Head
+E. viminalis,DOG,D,3,29.9,1.4,,-41.53926901,146.325624,Dogs Head
+E. viminalis,DOG,D,4,21.5,1.4,,-41.53993696,146.324256,Very small leaves compared to others; Dogs Head
+E. viminalis,DOG,D,5,19,1.4,,-41.540951,146.325418,Dogs Head
+E. viminalis,DOG,D,6,56.1,1.4,,-41.53919198,146.324337,Dogs Head
+E. viminalis,DOG,D,7,42.8,1.4,,-41.53914403,146.323048,Dogs Head
+E. viminalis,DOG,E,1,39.4,1.4,,-41.54475898,146.329185,Dogs Head
+E. viminalis,DOG,E,2,55.2,1.4,,-41.54481196,146.328371,Dogs Head
+E. viminalis,DOG,E,3,19.5,1.4,,-41.54466896,146.328055,Dogs Head
+E. viminalis,DOG,E,4,15.2,1.4,,-41.54421902,146.329598,Dogs Head
+E. viminalis,DOG,E,5,40,1.4,,-41.54414903,146.329943,Dogs Head
+E. viminalis,DOG,E,6,31.1,1.4,,-41.54333297,146.331194,Dogs Head
+E. viminalis,DOG,E,7,28,1.4,,-41.54200201,146.330493,Dogs Head
 E. amygdalina,GRA,A,1,41.4,1.4,,-42.54933896,147.459072,GPS has poor reception for all at this subplot
 E. amygdalina,GRA,A,2,51.8,1.4,,-42.54940904,147.46013,
 E. amygdalina,GRA,A,3,23.1,1.4,,-42.54904401,147.460444,
@@ -304,7 +304,7 @@ E. amygdalina,BOF,C,3,51.3,1.4,,-41.18667704,148.176828,
 E. amygdalina,BOF,C,4,33.9,1.4,,-41.18743703,148.177659,
 E. amygdalina,BOF,C,5,50.5,1.4,,-41.18715196,148.177027,
 E. viminalis,BOF,A,6,57,1.4,,-41.18522203,148.175361,
-E. ovata,BOF,E,1,33.5,1.4,,-41.18264199,148.170439,Won't be able to do proper community surveys
+E. ovata,BOF,E,10,33.5,1.4,,-41.18264199,148.170439,Won't be able to do proper community surveys; renaming to E10 since E1 is duplicated
 E. ovata,BOF,A,3,50,1.4,,-41.214799,148.155835,
 E. ovata,BOF,A,4,20.2,1.4,,-41.21497904,148.15612,
 E. ovata,BOF,A,2,49.3,1.4,,-41.21468802,148.156648,

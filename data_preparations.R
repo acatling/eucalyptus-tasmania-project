@@ -26,32 +26,37 @@ my_theme <- theme(axis.title.x = element_text(size = 16),
 #### Importing and tidying data ####
 ## Importing growth data
 growthdataraw <-read_csv("Data/growth_data.csv")
-## Importing initial DBH data
-initialdbhdataraw <- read_csv("Data/initial_field_dbh_data.csv")
-# Removing CII column - crown index that I never measured
-initialdbhdata <- initialdbhdataraw %>% select(-CII)
-#Merging DBH data with growth data
-growthdata <- left_join(growthdataraw, initialdbhdata, by = c("Site", "Focal_sp", "Plot", "Tree"))
-
-### MER VIMI B4 and MER VIMI B5 incorrectly recorded as DOG B4 and B5
+growthdata <- growthdataraw
+## MER VIMI B4 and MER VIMI B5 incorrectly recorded as DOG B4 and B5
 #Adjusting these. There are no DOG VIMI Bs!
 # This the case for both initial dbh and growth measurements - trees may be mislabelled
 growthdata <- within(growthdata, Site[Site == 'DOG' & Focal_sp == 'VIMI' & Plot == 'B' & Tree == '4'] <- 'MER')
 growthdata <- within(growthdata, Site[Site == 'DOG' & Focal_sp == 'VIMI' & Plot == 'B' & Tree == '5'] <- 'MER')
 
-## Importing site characteristics - climate data and site names
-#sitechar <- read_csv("Data/tas_site_rainfall.csv")
-#removing this because it has been updated from WorldClim file
-#Merging with growth data
-#growthdata <- left_join(growthdata, sitechar)
+## Importing initial DBH data
+initialdbhdataraw <- read_csv("Data/initial_field_dbh_data.csv")
+# Removing CII column - crown index that I never measured
+initialdbhdata <- initialdbhdataraw %>% select(-CII)
+#Creating column for abbreviated Focal_sp
+initialdbhdata$Focal_sp <- initialdbhdata$Species
+initialdbhdata <- within(initialdbhdata, Focal_sp[Species == "E. amygdalina"] <- "AMYG")
+initialdbhdata <- within(initialdbhdata, Focal_sp[Species == "E. obliqua"] <- "OBLI")
+initialdbhdata <- within(initialdbhdata, Focal_sp[Species == "E. ovata"] <- "OVAT")
+initialdbhdata <- within(initialdbhdata, Focal_sp[Species == "E. viminalis"] <- "VIMI")
+
+#Merging DBH data with growth data
+growthdata <- left_join(growthdata, initialdbhdata, by = c("Site", "Focal_sp", "Plot", "Tree"))
 
 #Note that DBH_cm is not numeric because of two NAs (can be dropped) and two UNs (unknown DBH but have growth data)
 
 #Removing trees that I don't have growth data for at all (no GPS coords or removed) (7)
 #and trees that were incorrectly IDd (6) total 13 trees
-#Check later: DOG AM B5 tree fell on it ** do this
 trees_to_remove <- read_csv("Data/trees_to_remove.csv")
 growthdata <- anti_join(growthdata, trees_to_remove, by = c("Site", "Focal_sp", "Plot", "Tree"))
+#Tree fall recorded for DOG AMYG B5 on 19/01/22, so removing growth data for period 2 and period 3
+#Removed this note from community_surveys_data sheet too so that rows aren't duplicated for NCI calcs
+growthdata <- within(growthdata, Growth[Site == "DOG" & Focal_sp == "AMYG" & Plot == "B" & Tree == "5" & Period == "3"] <- NA)
+growthdata <- within(growthdata, Growth[Site == "DOG" & Focal_sp == "AMYG" & Plot == "B" & Tree == "5" & Period == "2"] <- NA)
 
 ## Want to calculate growth as a rate, as different number of days between notching and growth measurements
 #this dates_growth_and_bom_sites file also has info on nearest BOM site
@@ -64,7 +69,7 @@ datesdata <- datesdataraw %>% select(Site, Period, Days_growth_since_notching)
 #Merging with growth data
 growthdata <- left_join(growthdata, datesdata, by = c("Site", "Period"))
 
-#Different units for growth at the moment. 2021 in mm and 2022 in cm. Converting 2022 growth cm to mm.
+#Different units for growth at the moment. 2021 and 2023 in mm and 2022 in cm. Converting 2022 growth cm to mm. 
 growthdata$Growth[growthdata$Period==2] <- growthdata$Growth[growthdata$Period==2]*10
 
 # Note that this is not true growth but instead the distance of dendrometer from time '0'
@@ -72,29 +77,39 @@ growthdata$Growth[growthdata$Period==2] <- growthdata$Growth[growthdata$Period==
 #Creating a column for true growth
 #Period 1 = growth
 # Period 2 = growth period 2 - growth period 1
+#Period 3 = growth period 3 - growth period 2
 growthdata$true_growth <- growthdata$Growth
 growthdata$true_growth[growthdata$Period==2] <- growthdata$Growth[growthdata$Period==2]-growthdata$Growth[growthdata$Period==1]
+growthdata$true_growth[growthdata$Period==3] <- growthdata$Growth[growthdata$Period==3]-growthdata$Growth[growthdata$Period==2]
 
 #Creating a column for days of growth in the period
 #since number_days_growth refers to total/relative to time '0'
 growthdata$days_in_period <- growthdata$Days_growth_since_notching
 growthdata$days_in_period[growthdata$Period==2] <- growthdata$Days_growth_since_notching[growthdata$Period==2]-growthdata$Days_growth_since_notching[growthdata$Period==1]
+growthdata$days_in_period[growthdata$Period==3] <- growthdata$Days_growth_since_notching[growthdata$Period==3]-growthdata$Days_growth_since_notching[growthdata$Period==2]
 
-#Removing the period 1 values that were notched in period 1 so therefore only have period 2 values:
-#Actually, instead of removing, just leaving them as NAs (so that same number of rows for period 1 and 2)
+#Adjust the period 1 values that were notched in period 1 so therefore only have period 2 and 3 values:
+#instead of removing, just leaving them as NAs (so that same number of rows for period 1 and 2)
 # GRA OBLI A 10, DOG AMYG B8, EPF AMYG B6
-#growthdata <- growthdata %>% filter(!((Period == "1" & Site == "GRA" & Focal_sp == "OBLI" & Plot == "A" & Tree == "10")))
-#growthdata <- growthdata %>% filter(!((Period == "1" & Site == "DOG" & Focal_sp == "AMYG" & Plot == "B" & Tree == "8")))
-#growthdata <- growthdata %>% filter(!((Period == "1" & Site == "EPF" & Focal_sp == "AMYG" & Plot == "B" & Tree == "6")))
 ##Need to adjust their period 2 values which are currently NAs, setting true growth value to growth value
 # and yes need to use growth here, not true_growth, since growth only represents period 2 anyway
 # had to remove them after calculations otherwise unequal number for period 2 - period 1
-growthdata <- within(growthdata, true_growth[Site == "GRA" & Focal_sp == "OBLI" & Plot == "A" & Tree == "10"] <- growthdata$Growth[Site == "GRA" & Focal_sp == "OBLI" & Plot == "A" & Tree == "10"])
-growthdata <- within(growthdata, true_growth[Site == "DOG" & Focal_sp == "AMYG" & Plot == "B" & Tree == "8"] <- growthdata$Growth[Site == "DOG" & Focal_sp == "AMYG" & Plot == "B" & Tree == "8"])
-growthdata <- within(growthdata, true_growth[Site == "EPF" & Focal_sp == "AMYG" & Plot == "B" & Tree == "6"] <- growthdata$Growth[Site == "EPF" & Focal_sp == "AMYG" & Plot == "B" & Tree == "6"])
+growthdata <- within(growthdata, true_growth[Site == "GRA" & Focal_sp == "OBLI" & Plot == "A" & Tree == "10" & Period == "2"] <- growthdata$Growth[Site == "GRA" & Focal_sp == "OBLI" & Plot == "A" & Tree == "10" & Period == "2"])
+growthdata <- within(growthdata, true_growth[Site == "DOG" & Focal_sp == "AMYG" & Plot == "B" & Tree == "8" & Period == "2"] <- growthdata$Growth[Site == "DOG" & Focal_sp == "AMYG" & Plot == "B" & Tree == "8" & Period == "2"])
+growthdata <- within(growthdata, true_growth[Site == "EPF" & Focal_sp == "AMYG" & Plot == "B" & Tree == "6" & Period == "2"] <- growthdata$Growth[Site == "EPF" & Focal_sp == "AMYG" & Plot == "B" & Tree == "6" & Period =="2"])
+
+##Adjusting growth of DOG AMYG D1 that had damage to the band
+#period 1 is fine
+#period 3 is difference in distances between notch and left side of rightmost clamp/seal
+#179.95 (p3) - 151.98 (p2) = 27.97
+growthdata <- within(growthdata, true_growth[Site == "DOG" & Focal_sp == "AMYG" & Plot == "D" & Tree == "1" & Period == "3"] <- 27.97)
+#Period 2 must be NA. Have good photos of band from period 1 and 2
+growthdata <- within(growthdata, true_growth[Site == "DOG" & Focal_sp == "AMYG" & Plot == "D" & Tree == "1" & Period == "2"] <- NA)
+#dont have initial dbh for period 3, this makes sense since we don't have growth for period 2
 
 ## Changing negative growth to zero
-growthdata <- growthdata %>% mutate(growth_no_negs = true_growth)
+growthdata <- growthdata %>% mutate(growth_no_negs = true_growth,
+                                    DBH_cm = `DBH (cm)`)
 growthdata <- within(growthdata, growth_no_negs[growth_no_negs<0] <- '0')
 
 #Calculate growth rate (mm/day)
@@ -102,8 +117,6 @@ growthdata$growth_no_negs <- as.numeric(growthdata$growth_no_negs)
 growthdata <- growthdata %>% mutate(growth_rate = growth_no_negs/days_in_period)
 
 #Making initial DBH (DBH_cm) numeric (inputted with some unknown characters)
-#check this: remove unknown DBH values?? GRA OVAT A4 and GRA VIMI A8. Make sure DBH of these 
-# is measured next time I survey! Can back-calculate it from growth
 growthdata$DBH_cm <- as.numeric(growthdata$DBH_cm)
 
 #### Calculate period climate ####
@@ -846,13 +859,6 @@ growthdata <- left_join(growthdata, period_climate)
 
 source("WorldClim.R")
 
-#Summary: should streamline this* to do*:
-#Annual norm climate: CMD [simpleResTas df]
-#Monthly norm climate: norm_md [climate_diff df]
-#Monthly period climate: monthly_period_md [climate_diff df]
-#Total growing period climate: period_md [period_climate df]
-#anomaly: monthly [climate_diff df]
-
 ## Adding in long-term annual average PPT, PET and CMD from WorldClim
 growthdata <- left_join(growthdata, simpleResTas)
 
@@ -866,12 +872,16 @@ growthdata <- growthdata %>% mutate(daily_period_rainfall = period_rainfall/days
                                     daily_period_md = period_md/days_in_period)
 
 ### Importing community survey data ####
-rawsurveydata <- read_csv("Data/community_surveys_data.csv", col_types = cols(.default = "?", Neighbour_DBH_cm_7 = col_double(), Neighbour_DBH_cm_8 = col_double(), Neighbour_DBH_cm_9 = col_double(), Neighbour_DBH_cm_10 = col_double(), Neighbour_DBH_cm_11 = col_double()))
+rawsurveydata <- read_csv("Data/community_surveys_data.csv", col_types = cols(.default = "?", Neighbour_DBH_cm_5 = col_double(), Neighbour_DBH_cm_6 = col_double(), Neighbour_DBH_cm_7 = col_double(), Neighbour_DBH_cm_8 = col_double(), Neighbour_DBH_cm_9 = col_double(), Neighbour_DBH_cm_10 = col_double(), Neighbour_DBH_cm_11 = col_double()))
 #Parsing error using just read_csv because it is deciding what is in the column from first 1000 rows
-# and there trees with > 7 stems are after first 1000 rows
+# and there\\ trees with > 7 stems are after first 1000 rows
 
 #Removing 5 NAs for Neighbour_DBH_cm where the DBH was not recorded
 surveydata <- rawsurveydata %>% filter(!is.na(Neighbour_DBH_cm))
+#GRA OBLI B 6 does not have survey data - accidentally recorded as A6 with two surveys, but there is a note
+#adjusted directly in data
+#TMP OBLI C6 dos not have survey data - accidentally labelled as A6, which is repeated
+#adjusted directly in data (true C6 was recorded on 27/01/2022)
 
 ### Checking survey notes
 #All notes on any row:
@@ -880,8 +890,13 @@ surveydata <- rawsurveydata %>% filter(!is.na(Neighbour_DBH_cm))
 #Completed surveys for 310 plots
 #test2 <- surveydata %>% group_by(Site, Focal_sp, Plot, Tree) %>% filter(row_number() == 1)
 
-## Removing these (no growth data or incorrectly IDd)
+## Removing trees (no growth data or incorrectly IDd or loose band or extensive loose bark or overlapping neighbourhoods)
+#EPF OVAT C1 and C2 right next to each other (4 m away), I couldn't decide which to study
+#Same with #BOF VIMI B4 and B3 so removing the second one of each (VIMI B4 and OVAT C2) via trees_to_remove
+#(since I can't have overlapping neighbourhoods)
 surveydata <- anti_join(surveydata, trees_to_remove, by = c("Site", "Focal_sp", "Plot", "Tree"))
+#EPF ovat c1 and c2 share only a quarter or less of overlapping neighbourhood, that's okay
+#same with epf ovat b7 and b6,f fine
 
 #Replacing NAs with 0s (to merge neighbour DBHs later)
 #test <- surveydata %>% replace(is.na(.), 0) #not working :(
@@ -1002,12 +1017,8 @@ surveysimple <- surveydata %>% group_by(Site, Focal_sp, Plot, Tree) %>%
                                        total_nbh_ba, number_neighbours, 
                                        total_nci, intra_nci, inter_nci)
 #Merging neighbour data with growth rate data
-#4 trees that are in growth data but not in surveysimple
-#test2 <- anti_join(growthdata, surveysimple)
-#TMP OBLI B4, DOGOBLIB2, DOGVIMIB5, DOGVIMIC4,
-#GRAOBLIB6, GRAOVATA1, GRAVIMIA7, GRAVIMIB4, BOFVIMIB4
-## fix this**
-### also do this - gra amyg c1 / resurveyed plots, adjust them **
+#DOG OBLI B2 is meant to be D2, adjusted in survey notes
+#GRA amyg c 1  was resurveyed, adjusted in survey notes
 growthnbhdata <- left_join(growthdata, surveysimple, by = c("Site", "Focal_sp", "Plot", "Tree"))
 
 ### Adjusting names of some plots
@@ -1019,15 +1030,9 @@ growthnbhdata <- within(growthnbhdata, Focal_sp[Site == 'GRA' & Focal_sp == 'OVA
 growthnbhdata <- within(growthnbhdata, Tree[Site == 'GRA' & Focal_sp == 'OVAT' & Plot == 'A' & Tree == '4'] <- '11')
 growthnbhdata <- within(growthnbhdata, Focal_sp[Site == 'GRA' & Focal_sp == 'OVAT' & Plot == 'A' & Tree == '11'] <- 'VIMI')
 
-## Removing dodgy values where the band came off etc. See notes, many things to adjust. do this!*
-
 #EPF VIMI B1 is an ovata: this is the OVAT B area - let's call it OVAT B 10 (previously had it as OVAT Z1)
 growthnbhdata <- within(growthnbhdata, Tree[Site == 'EPF' & Focal_sp == 'VIMI' & Plot == 'B' & Tree == '1'] <- '10')
 growthnbhdata <- within(growthnbhdata, Focal_sp[Site == 'EPF' & Focal_sp == 'VIMI' & Plot == 'B' & Tree == '10'] <- 'OVAT')
-
-## BOF OVAT Z1 was called Z after E1 was duplicated - renaming it to E10 instead.
-growthnbhdata <- within(growthnbhdata, Tree[Site == 'BOF' & Focal_sp == 'OVAT' & Plot == 'Z' & Tree == '1'] <- '10')
-growthnbhdata <- within(growthnbhdata, Plot[Site == 'BOF' & Focal_sp == 'OVAT' & Plot == 'Z' & Tree == '10'] <- 'E')
 
 #### Soil data ####
 soildataraw <- read_csv("Data/soil_data.csv")
@@ -1077,9 +1082,9 @@ growthnbhdata$soil_id <- 'ABC'
 #Here the VIMI site is TMP-VI which needs to match growthnbhdata in join, rename it in both
 ###TMP
 #obli A, B and C. Vimi alone VI-A.
-soildata <- within(soildata, Plot[Plot == "VI"] <- "VI-A")
-growthnbhdata <- within(growthnbhdata, Plot[Focal_sp == "VIMI" & Site == "TMP"] <- "VI-A")
-growthnbhdata <- within(growthnbhdata, soil_id[Site=="TMP" & Focal_sp == "VIMI"] <- "TMP_VI-A")
+#soildata <- within(soildata, Plot[Plot == "VI"] <- "TMP_VI-A")
+#growthnbhdata <- within(growthnbhdata, Plot[Focal_sp == "VIMI" & Site == "TMP"] <- "VI-A")
+growthnbhdata <- within(growthnbhdata, soil_id[Site=="TMP" & Focal_sp == "VIMI"] <- "TMP_VI")
 growthnbhdata <- within(growthnbhdata, soil_id[Site=="TMP" & Focal_sp == "OBLI" & Plot == "A"] <- "TMP_A")
 growthnbhdata <- within(growthnbhdata, soil_id[Site=="TMP" & Focal_sp == "OBLI" & Plot == "B"] <- "TMP_B")
 growthnbhdata <- within(growthnbhdata, soil_id[Site=="TMP" & Focal_sp == "OBLI" & Plot == "C"] <- "TMP_C")
@@ -1153,7 +1158,16 @@ growthnbhdata <- left_join(growthnbhdata, climate_diff, by = c("Site", "Period")
 #Growth is in mm so converting DBH to mm too
 growthnbhdata <- growthnbhdata %>% mutate(DBH_mm = DBH_cm*10,
                                           preceding_dbh = DBH_mm)
+
 growthnbhdata$preceding_dbh[growthnbhdata$Period==2] <- growthnbhdata$preceding_dbh[growthnbhdata$Period==1]+growthnbhdata$growth_no_negs[growthnbhdata$Period==1]
+
+#Fixing preceding_dbh of trees that were notched late
+# GRA OBLI A 10, DOG AMYG B8, EPF AMYG B6
+growthnbhdata <- within(growthnbhdata, preceding_dbh[Site == 'EPF' & Focal_sp == 'AMYG' & Plot == 'B' & Tree == '6' & Period == 2] <- growthnbhdata$DBH_mm[Site == 'EPF' & Focal_sp == 'AMYG' & Plot == 'B' & Tree == '6' & Period == 1])
+growthnbhdata <- within(growthnbhdata, preceding_dbh[Site == 'GRA' & Focal_sp == 'OBLI' & Plot == 'A' & Tree == '10' & Period == 2] <- growthnbhdata$DBH_mm[Site == 'GRA' & Focal_sp == 'OBLI' & Plot == 'A' & Tree == '10' & Period == 1])
+growthnbhdata <- within(growthnbhdata, preceding_dbh[Site == 'DOG' & Focal_sp == 'AMYG' & Plot == 'B' & Tree == '8' & Period == 2] <- growthnbhdata$DBH_mm[Site == 'DOG' & Focal_sp == 'AMYG' & Plot == 'B' & Tree == '8' & Period == 1])
+
+growthnbhdata$preceding_dbh[growthnbhdata$Period==3] <- growthnbhdata$preceding_dbh[growthnbhdata$Period==2]+growthnbhdata$growth_no_negs[growthnbhdata$Period==2]
 
 ### Simplifying dataset
 growthnbhdata <- growthnbhdata %>% select(Site, Focal_sp, Plot, Tree, Period, Growth,
@@ -1219,12 +1233,10 @@ oblidata <- growthnbhdata %>% filter(Focal_sp == 'OBLI')
 ovatdata <- growthnbhdata %>% filter(Focal_sp == 'OVAT')
 vimidata <- growthnbhdata %>% filter(Focal_sp == 'VIMI')
 
-#vimi has two NAs for growth which is causing problems for plotting, so removing them
-#vimidata <- vimidata %>% filter(!(is.na(DBH_cm)))
-
 specieslist <- list(amygdata, oblidata, ovatdata, vimidata)
 speciesnamelist <- c("E. amygdalina", "E. obliqua", "E. ovata", "E. viminalis")
 speciesabbrevlist <- c("AMYG", "OBLI", "OVAT", "VIMI")
 
 ## Save dataframe as csv
 #write_csv(growthnbhdata, "Output/tas_data.csv")
+
