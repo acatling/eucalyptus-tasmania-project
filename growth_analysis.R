@@ -84,14 +84,22 @@ plot(dharma)
 summary(dbhmod)
 emmeans(dbhmod, list(pairwise ~ Focal_sp), adjust="tukey")
 
-
-ggplot(onerowdata, aes(x = Focal_sp, y = sqrt(preceding_dbh)))+
+dev.off()
+pdf("Output/initial-dbh.pdf")
+par(pty = "s")
+ggplot(onerowdata, aes(x = Focal_sp, y = (preceding_dbh)))+
   geom_boxplot()+
-  geom_jitter(width = 0.2, alpha = 0.5, colour = "forestgreen")+
+  geom_jitter(width = 0.1, alpha = 0.3)+
   theme_classic()+
-  ylab("sqrt(Initial DBH (cm))")+
+  ylab("Initial DBH (mm)")+
   xlab("Focal species")+
-  my_theme
+  scale_x_discrete(labels=c("E. amygdalina", "E. obliqua", "E. ovata", "E. viminalis"))+
+  geom_text(data=meangrowth, aes(x=Focal_sp, y=740, label=c('a', 'a', 'a', 'a')), size =6)+
+  my_theme+
+  theme(axis.text=element_text(size=16), 
+        axis.title=element_text(size=16),
+        axis.text.x = element_text(face = "italic"))
+dev.off()
 
 #One-way ANOVA to see, are there differences in initial DBH between species?
 modeldbh1 <- aov(sqrt(DBH_cm) ~ Focal_sp, data = onerowdata)
@@ -180,42 +188,78 @@ meangrowth <- growthnbhdata %>%
             sd_growth_rate_period3 = sd(growth_rate[Period == 3]))
 
 #growthnbhdata %>% filter(Period == 3) %>%
+
+#have not updated these labels yet
+dev.off()
+pdf("Output/species-growth-rate-by-period.pdf")
+par(pty = "s")
 ggplot(growthnbhdata, aes(x = Focal_sp, y = sqrt(growth_rate)))+
   geom_boxplot()+
-  geom_jitter(aes(colour = Period), width = 0.2, alpha = 0.5)+
+  geom_jitter(aes(colour = Period), width = 0.1, alpha = 0.4)+
   theme_classic()+
-  ylab("sqrt(Growth rate (mm/day))")+
+  ylab("Growth rate (mm/day, sqrt)")+
   xlab("Focal species")+
-  my_theme
+  scale_x_discrete(labels=c("E. amygdalina", "E. obliqua", "E. ovata", "E. viminalis"))+
+  geom_text(data=meangrowth, aes(x=Focal_sp, y=0.55, label=c('a', 'b', 'ac', 'c')), size =6)+
+  my_theme+
+  theme(axis.text=element_text(size=16), 
+        axis.title=element_text(size=16),
+        axis.text.x = element_text(face = "italic"),
+        legend.title = element_text(size = 14))
+dev.off()
 
+## Not coloured by census period
+dev.off()
+pdf("Output/species-growth-rate.pdf")
+par(pty = "s")
+ggplot(growthnbhdata, aes(x = Focal_sp, y = sqrt(growth_rate)))+
+  geom_boxplot()+
+  geom_jitter(width = 0.1, alpha = 0.3)+
+  theme_classic()+
+  ylab("Growth rate (mm/day, sqrt)")+
+  xlab("Focal species")+
+  scale_x_discrete(labels=c("E. amygdalina", "E. obliqua", "E. ovata", "E. viminalis"))+
+  geom_text(data=meangrowth, aes(x=Focal_sp, y=0.55, label=c('a', 'b', 'ac', 'c')), size =6)+
+  my_theme+
+  theme(axis.text=element_text(size=16), 
+        axis.title=element_text(size=16),
+        axis.text.x = element_text(face = "italic"))
+dev.off()
 #One-way ANOVA to see if there are differences in growth rate between species
 modelgr1 <- aov(sqrt(growth_rate) ~ Focal_sp, data = growthnbhdata)
 summary(modelgr1)
 #Yes, there are
 TukeyHSD(modelgr1)
-#E. viminalis grows at a significantly faster rate than other species
-# E. amygdalina, E. ovata and E. obliqua all grow at similar rates
-
-##LMMs
-#keeping PC1 as covariate
-growthmod <- lmer(sqrt(growth_rate) ~ Focal_sp + std_PC1 + (1|Site/Plot/Tree), growthnbhdata)
-dharma <- simulateResiduals(growthmod)
-#pretty terrible residuals
-plot(dharma)
-summary(growthmod)
-emmeans(growthmod, list(pairwise ~ Focal_sp), adjust="tukey")
-
+#vimi and amyg different
+#vimi and obli different
 modelgr2 <- lm(sqrt(growth_rate) ~ Focal_sp, growthnbhdata)
 dharma <- simulateResiduals(modelgr2)
 plot(dharma)
 summary(modelgr2)
 emmeans(modelgr2, list(pairwise ~ Focal_sp), adjust="tukey")
 
+##LMMs
+#keeping PC1 as covariate
+growthmod <- lmer(sqrt(growth_rate) ~ Focal_sp + std_PC1 + (1|Site/Plot/Tree), growthnbhdata)
+dharma <- simulateResiduals(growthmod)
+#pretty terrible residuals, normality okay
+plot(dharma)
+summary(growthmod)
+emmeans(growthmod, list(pairwise ~ Focal_sp), adjust="tukey")
+#amyg and obli results here are waaaayyy different from model above, from random effects
+#amyg and obli different
+#obli and ovat different
+#obli and vimi different
+
 modelgr3 <- lmer(sqrt(growth_rate) ~ Focal_sp + (1|Site/Plot/Tree), growthnbhdata)
 dharma <- simulateResiduals(modelgr3)
 plot(dharma)
 summary(modelgr3)
 emmeans(modelgr3, list(pairwise ~ Focal_sp), adjust="tukey")
+#amyg and obli different
+#obli and ovat different
+#obli and vimi different
+#vimi and amyg different
 
 modelgr4 <- lmer(sqrt(growth_rate) ~ Focal_sp + std_PC1 + std_preceding_dbh + std_total_nci +
                    std_norm_md + std_anomaly + (1|Site/Plot/Tree), growthnbhdata)
@@ -223,8 +267,14 @@ dharma <- simulateResiduals(modelgr4)
 plot(dharma)
 summary(modelgr4)
 emmeans(modelgr4, list(pairwise ~ Focal_sp), adjust="tukey")
+#residuals are so bad, violates normality
+#amyg and obli different
+#obli and ovat different
+#obli and vimi different
+#vimi and amyg different
+#obli slower than all other sps
 
-#Compared models with just PC1 covariate, nothing but REs and all covariates
+#but compared models with just PC1 covariate, nothing but REs and all covariates
 # and all agree with pairwise comparisons
 
 ## Do growth rates differ by period?

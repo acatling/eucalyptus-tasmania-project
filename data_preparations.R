@@ -1,6 +1,7 @@
 ### Eucalyptus Growth Tasmania Project 
 # Alexandra Catling PhD Research
 # Started 26/02/2021
+# Updated June 2023
 
 ### Importing packages and functions ####
 library(tidyverse)
@@ -15,13 +16,6 @@ select <- dplyr::select
 
 #Read in functions
 source("functions.R")
-
-my_theme <- theme(axis.title.x = element_text(size = 16),
-                  axis.title.y = element_text(size = 16),
-                  axis.text = element_text(size = 16),
-                  strip.text.x = element_text(size = 16),
-                  legend.text = element_text(size = 14),
-                  legend.title = element_blank())
 
 #### Importing and tidying data ####
 ## Importing growth data
@@ -882,24 +876,17 @@ surveydata <- rawsurveydata %>% filter(!is.na(Neighbour_DBH_cm))
 #adjusted directly in data
 #TMP OBLI C6 dos not have survey data - accidentally labelled as A6, which is repeated
 #adjusted directly in data (true C6 was recorded on 27/01/2022)
-
-### Checking survey notes
-#All notes on any row:
-#test <- surveydata %>% filter(!((is.na(Notes_surveys))))
-#All notes about focal were on first row for that plot:
 #Completed surveys for 310 plots
-#test2 <- surveydata %>% group_by(Site, Focal_sp, Plot, Tree) %>% filter(row_number() == 1)
 
 ## Removing trees (no growth data or incorrectly IDd or loose band or extensive loose bark or overlapping neighbourhoods)
 #EPF OVAT C1 and C2 right next to each other (4 m away), I couldn't decide which to study
 #Same with #BOF VIMI B4 and B3 so removing the second one of each (VIMI B4 and OVAT C2) via trees_to_remove
-#(since I can't have overlapping neighbourhoods)
+#(since I can't have overlapping neighbourhoods, pseudo-replication)
 surveydata <- anti_join(surveydata, trees_to_remove, by = c("Site", "Focal_sp", "Plot", "Tree"))
 #EPF ovat c1 and c2 share only a quarter or less of overlapping neighbourhood, that's okay
 #same with epf ovat b7 and b6,f fine
 
 #Replacing NAs with 0s (to merge neighbour DBHs later)
-#test <- surveydata %>% replace(is.na(.), 0) #not working :(
 surveydata <- within(surveydata, Neighbour_DBH_cm_2[is.na(Neighbour_DBH_cm_2)] <- '0')
 surveydata <- within(surveydata, Neighbour_DBH_cm_3[is.na(Neighbour_DBH_cm_3)] <- '0')
 surveydata <- within(surveydata, Neighbour_DBH_cm_4[is.na(Neighbour_DBH_cm_4)] <- '0')
@@ -930,26 +917,6 @@ surveydata <- surveydata %>% mutate(Sum_nbh_DBH = `Neighbour_DBH_cm` + `Neighbou
                                       `Neighbour_DBH_cm_6` + `Neighbour_DBH_cm_7` + `Neighbour_DBH_cm_8` + 
                                       `Neighbour_DBH_cm_9` + `Neighbour_DBH_cm_10` + `Neighbour_DBH_cm_11`)
 
-#### Plotting data! To see how much survey info
-# dev.off()
-# pdf("Output/Neighbour_size.pdf")
-# ggplot(surveydata, aes(x = Neighbour_sp_ID, y = log(Sum_nbh_DBH)))+
-#   geom_boxplot()+
-#   geom_jitter(alpha=0.1, colour = "forestgreen", width = 0.05, height = 0.05)+
-#   theme_classic()+
-#   theme(axis.text.x = element_text(angle = 90))
-# dev.off()
-
-# dev.off()
-# pdf("Output/Neighbour_size_distance.pdf")
-# ggplot(surveydata, aes(x = Neighbour_distance_m, y = log(Sum_nbh_DBH)))+
-#   geom_point(aes(col = Neighbour_sp_ID), alpha=0.1)+
-#   theme_classic()+
-#   theme(legend.position = "bottom", legend.key.size = unit(0.2, "cm"), legend.title = NULL)
-# dev.off()
-# legend.key.width=unit(0.01,"cm")
-####
-
 #### Calculating total DBH, NCI and number of neighbours ####
 # Can't add DBHs, so need to calculate basal area and sum that
 #Basal area = pi * radius^2
@@ -974,21 +941,11 @@ surveydata <- left_join(surveydata, numbernbhdata)
 #Where di = DBH of the ith neighbour tree (cm)
 #d = DBH of focal tree (cm)
 #dist = horizontal distance of neighbour from focal (m)
-#examples, 40 cm DBH focal, 20 cm DBH neighbour, 1 m away: 0.005
-#or 9 m away: 0.00056
 
 #Need to import DBH data to surveydata to calculate NCI
 dbhdatatomerge <- growthdata %>% group_by(Site, Focal_sp, Plot, Tree) %>%
   filter(row_number() == 1) %>% select(Site, Focal_sp, Plot, Tree, DBH_cm)
 surveydata <- left_join(surveydata, dbhdatatomerge)
-#Calculating NCI at individual neighbour level
-#Canham 2004 - NCiintra = sum
-#basal area/distance^2
-#square - non-linear response based on distance
-#linear decay if just distance
-#Uriarte
-#used to have: NCI_nbh = Neighbour_DBH_cm/(DBH_cm*Neighbour_distance_m)
-# but we will instead include DBH_cm*NCI in the model 
 
 #Calculating total, intra and inter NCI by focal tree
 surveydata <- surveydata %>% mutate(NCI_nbh = Neighbour_DBH_cm/Neighbour_distance_m)
@@ -1036,12 +993,7 @@ growthnbhdata <- within(growthnbhdata, Focal_sp[Site == 'EPF' & Focal_sp == 'VIM
 
 #### Soil data ####
 soildataraw <- read_csv("Data/soil_data.csv")
-# ggplot(soildata, aes(x = `pH_Level_(CaCl2)`, y = `pH_Level_(H2O)`))+
-#   geom_point(alpha=0.3)+
-#  theme_classic()
-# ggplot(soildata, aes(x = nitrate, y = ammonium))+
-#   geom_point()+
-#   theme_classic()
+
 #Making nitrate_nitrogen <1 values 0 [so that I can sum them for total N]
 soildata <- within(soildataraw, `Nitrate_Nitrogen_mg/kg`[`Nitrate_Nitrogen_mg/kg` == '<1'] <- "0")
 #Need nitrate_nitrogen to be numeric, not sure why not working unless I remake column
@@ -1054,11 +1006,6 @@ soildata <- soildata %>% mutate(total_nitrogen = nitrate + ammonium)
 soildata <- soildata %>% select(Sample_ID, phosphorous = 'Phosphorus_Colwell_mg/kg', potassium = `Potassium_Colwell_mg/kg`, 
                                 sulfur = `Sulfur_mg/kg`, carbon = `Organic_Carbon_%`, conductivity = `Conductivity_dS/m`, 
                                 pH = `pH_Level_(CaCl2)`, 'total nitrogen' = total_nitrogen)
-#Separate sample_ID into Site and Plot
-#Each sample_ID is effectively a plot at the moment
-
-# abioticpcadata <- abioticpcadata %>% unite("plotid", Site:Plot, remove = "false")
-# abioticpcatrim <- abioticpcadata %>% select(-c(Site, Plot))
 
 soildata_pca <- as.data.frame(soildata)
 rownames(soildata_pca) <- soildata_pca$Sample_ID
@@ -1072,8 +1019,8 @@ soildata$PC3<-soil_pca$scores[,3]
 
 ## Merge PC1 and PC2 into main dataset
 pc1andpc2 <- soildata %>% select(PC1, PC2)
+#Warning messages from below line are fine
 soildata <- soildata %>% separate(Sample_ID, c("Site", "Plot"), sep = "([ ?-])")
-#Warning messages from above line are fine
 
 ## Make soil ID and match soil values to that soil ID
 soildata <- soildata %>% unite("soil_id", Site:Plot, remove = "false")
@@ -1189,13 +1136,15 @@ growthnbhdata <- growthnbhdata %>% mutate(log_p1_inter_nci = log(inter_nci+1))
 
 ## Standardising continuous predictors to a mean of 0 and SD of 1
 #I want global standardised means and SDs across species for plot and model comparisions
-
 #Scaling NCI
 growthnbhdata <- growthnbhdata %>% mutate(std_total_nci = scale(log_total_nci, center = TRUE, scale = TRUE)[,1])
 #Scaling intra and inter NCI by the mean and sd of total NCI
 #to compare on the same scales when plotting (between each other and relative to total NCI)
-growthnbhdata <- growthnbhdata %>% mutate(std_intra_nci = (log_p1_intra_nci-mean(log_total_nci))/sd(log_total_nci))
-growthnbhdata <- growthnbhdata %>% mutate(std_inter_nci = (log_p1_inter_nci-mean(log_total_nci))/sd(log_total_nci))
+growthnbhdata <- growthnbhdata %>% mutate(plot_intra_nci = (log_p1_intra_nci-mean(log_total_nci))/sd(log_total_nci))
+growthnbhdata <- growthnbhdata %>% mutate(plot_inter_nci = (log_p1_inter_nci-mean(log_total_nci))/sd(log_total_nci))
+##But I also want each to be standardised to zero for model comparisons.
+growthnbhdata <- growthnbhdata %>% mutate(std_intra_nci = scale(log_p1_intra_nci, center = TRUE, scale = TRUE)[,1])
+growthnbhdata <- growthnbhdata %>% mutate(std_inter_nci = scale(log_p1_inter_nci, center = TRUE, scale = TRUE)[,1])
 
 #Scaling initial DBH / preceding dbh
 #Happy that it is normally distributed!

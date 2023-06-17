@@ -485,7 +485,7 @@ rsquaredtable[4,2] <- r.squaredGLMM(vimimod1)[1,1]
 rsquaredtable %>% kbl(digits = 2) %>%
   kable_classic(full_width = F, html_font = "Times", font_size = 12)
 
-#### Supp 2 - Table of sample sizes and site climate ####
+#### Table 1 - Supp 2 - Table of sample sizes and site climate ####
 #simpleResTas has annual long-term PPT, PET and MD
 #climate_diff has period-level long-term MD and period MD, and anomaly
 climatetable <- left_join(climate_diff, simpleResTas)
@@ -543,19 +543,21 @@ colnames(site_table) <- c('Site', 'Mean PPT', "Mean MD", "Period PPT", "Period M
 #   row_spec(0, italic = T) %>%
 #   add_header_above(c(" " = 5, "Number of focal trees" = 4))
 
-####  Table with just norm PPT and sample sizes
-site_table2 <- left_join(site_ppt, samplesizes_long) %>% replace(is.na(.), 0) %>% 
+####  Table with just norm PPT (annual), MD (annual) and sample sizes
+site_climate2 <- onerowdata %>% group_by(Site, PPT, CMD) %>% 
+  select(Site, PPT, CMD) %>% filter(row_number() == 1)
+site_table2 <- left_join(site_climate2, samplesizes_long) %>% replace(is.na(.), 0) %>% 
   group_by(Site) %>% filter(row_number() == 1)
-site_table2 <- site_table2 %>% arrange(`Norm PPT`)
-colnames(site_table2) <- c('Site', 'PPT', "E. amygdalina", "E. ovata", "E. viminalis", "E. obliqua")
+colnames(site_table2) <- c('Site', 'MAP', 'MD', "E. amygdalina", "E. ovata", "E. viminalis", "E. obliqua")
+site_table2 <- site_table2 %>% arrange(MAP)
 
 site_table2 %>%
-  kbl(caption = "<b>Table 1</b>. Number of focal trees and mean annual precipitation (PPT) at each site. PPT values were downloaded 
+  kbl(caption = "<b>Table 1</b>. Number of focal trees, mean annual precipitation (MAP) and mean annual moisture deficit (MD, potential evapotranspiration - precipitation) at each site. Precipitation and potential evapotranspiration values were downloaded 
   from the Global Aridity and PET Database based on 1970-2000 WorldClim climate averages (Zomer <i>et al.</i> 2022). Refer to Supp. Info. 2 for expanded site names.", 
-      digits = 0, align = "lccccc") %>%
+      digits = 0, align = "lcccccc") %>%
   kable_classic(full_width = T, html_font = "Times", font_size = 16) %>%
   row_spec(0, italic = T) %>%
-  add_header_above(c(" " = 2, "Number of focal trees" = 4))
+  add_header_above(c(" " = 3, "Number of focal trees" = 4))
 
 #### Research question 2: Intraspecific and interspecific NCI models ####
 #Not allowing size-effects of intra and interspecific crowding, too many parameters
@@ -645,7 +647,7 @@ growth_effects_kbl <- growth_effects_kbl %>% group_by(Species) %>% mutate(row = 
 #Plotting with kableR
 #Marginal r squareds from below table
 growth_effects_kbl %>% mutate(Effect = c("Intercept", "Conspecific NCI", "Heterospecific NCI", "Mean MD", "MD anomaly", "Preceding DBH", "PC1", "Conspecific NCI:Mean MD", "Heterospecific NCI:Mean MD")) %>%
-  kbl(align = 'lcccc', caption = "<b>Supplementary Information 4</b>. Model output with Estimate ± SE (standard error) for each species modelled separately. Marginal R-squared values reported. 
+  kbl(align = 'lcccc', caption = "<b>Supplementary Information 6</b>. Model output with Estimate ± SE (standard error) for each species modelled separately. Marginal R-squared values reported. 
   NCI is neighbourhood crowding index for conspecific or heterospecific neighbours. Mean MD is long-term mean moisture deficit summed over the census period. 
   MD anomaly is the difference between mean MD and observed MD. Preceding DBH is the size of each focal stem at the start of each census period.
   Low values of PC1 represent low soil fertility and conductivity. Asterisks denote significance: * p<0.05, ** p<0.01, *** p<0.001") %>%
@@ -653,7 +655,7 @@ growth_effects_kbl %>% mutate(Effect = c("Intercept", "Conspecific NCI", "Hetero
   kable_classic(full_width = T, html_font = "Times", font_size = 16) %>%
   kable_styling()%>%
   row_spec(0, italic = T) %>%
-  footnote(general = "Continuous predictors are scaled to a mean of 0. Mean MD is 319 mm per census period. Mean MD anomaly is -310 mm per census period. Mean preceding DBH is 377 mm. Mean NCI is 97 (mean neighbour abundance of 47 neighbouring trees in 10 m radius).", general_title="")
+  footnote(general = "Continuous predictors are scaled to a mean of 0. Mean MD is 319 mm per census period. Mean MD anomaly is -310 mm per census period. Mean preceding DBH is 377 mm. Mean conspecific and heterospecific NCI are respectively 25 and 72.", general_title="")
 
 #### Panel plot of growth ~ MD anomaly ####
 #not updated
@@ -1080,22 +1082,27 @@ dev.off()
 
 #### Figure 4 - Panel plot of growth ~ con and het neighbourhood crowding ####
 
+#Intra and inter means are relative to total NCI so actually need to hold them 
+#at their own means:
+#mean(growthnbhdata$std_intra_nci, na.rm=T) = -2.8
+#mean(growthnbhdata$std_inter_nci, na.rm=T) = -0.6
+
 dev.off()
-pdf("Output/panel_growth~con+het_NCI.pdf", width=21, height=21)
+pdf("Output/panel_growth~con+het_NCI_test.pdf", width=21, height=21)
 #darkgoldenrod
 #mediumpurple
 par(oma=c(8,4,3,1), mfrow=c(2,2), mar=c(7, 6, 4, 1))
 for(i in 1:length(specieslist)){
   plotted.data<-as.data.frame(specieslist[i])
-  plot(sqrt(growth_rate) ~ std_intra_nci, pch = 19, col = alpha("#E1BE6A", 0.4), ylab="", ylim=c(0,0.52), xlim=c(-6,2.5), xlab="",  tck=-0.01, cex=3, cex.axis = 3, padj=0.5, plotted.data)
-  points(sqrt(growth_rate) ~ std_inter_nci, pch=19, col= alpha("#40B0A6",0.4), cex =3, plotted.data)
+  plot(sqrt(growth_rate) ~ plot_intra_nci, pch = 19, col = alpha("#E1BE6A", 0.4), ylab="", ylim=c(0,0.52), xlim=c(-6,2.5), xlab="",  tck=-0.01, cex=3, cex.axis = 3, padj=0.5, plotted.data)
+  points(sqrt(growth_rate) ~ plot_inter_nci, pch=19, col= alpha("#40B0A6",0.4), cex =3, plotted.data)
   mtext(paste(letters[i], ")", sep=""), side=2, padj=-8.5,las=1, cex=4)
   title(main=bquote(italic(.(speciesnamelist[i]))), line=2, cex.main=4)
-  model<-lmer(sqrt(growth_rate) ~ std_intra_nci + std_inter_nci + std_norm_md + 
-               std_anomaly + std_norm_md:std_intra_nci + std_norm_md:std_inter_nci + 
+  model<-lmer(sqrt(growth_rate) ~ plot_intra_nci + plot_inter_nci + std_norm_md + 
+               std_anomaly + std_norm_md:plot_intra_nci + std_norm_md:plot_inter_nci + 
                std_preceding_dbh + std_PC1 + (1|Site/Plot/Tree), plotted.data)
-  x_to_plot_intra<-seq.func(plotted.data$std_intra_nci)
-  x_to_plot_inter<-seq.func(plotted.data$std_inter_nci)
+  x_to_plot_intra<-seq.func(plotted.data$plot_intra_nci)
+  x_to_plot_inter<-seq.func(plotted.data$plot_inter_nci)
   #intra - pink
   preddata <- with(model, data.frame(1, x_to_plot_intra, 0, 0, 0, 0, 0, x_to_plot_intra*0, 0*0))
   plotted.pred <- glmm.predict(mod = model, newdat = preddata, se.mult = 1.96, logit_link=FALSE, log_link=FALSE, glmmTMB=FALSE)
@@ -1330,6 +1337,56 @@ ggplot(pred_md_all, aes(x = Focal_sp, y = y, colour=md_category))+
         axis.text.x = element_text(face = "italic"))
  # theme(axis.text.x = element_blank(), axis.ticks.x = element_blank())
 #mean(amygdata$growth_rate[amygdata$std_preceding_dbh>0], na.rm=T)
+
+#### Species differences in growth rate - predicted growth ####
+#holding everything at its mean
+#amyg
+model<-lmer(sqrt(growth_rate) ~ std_total_nci + std_norm_md + std_anomaly + 
+              std_norm_md:std_total_nci + std_preceding_dbh + std_preceding_dbh:std_total_nci +
+              std_preceding_dbh:std_norm_md + std_PC1 + (1|Site/Plot/Tree), amygdata)
+## you can make multiple predictions at once - here I made the predictions for md =1 and md=-1
+amyg_md_pred<-glmm.predict(mod=model, newdat=data.frame(1, 0, 0, 0, 0, 0, 0*0, 0*0, 0*0), 
+                           se.mult=1.96, logit_link=FALSE, log_link=FALSE, glmmTMB=FALSE)^2
+#add species name
+amyg_md_pred$Focal_sp <- 'E. amygdalina'
+
+#obli
+model<-lmer(sqrt(growth_rate) ~ std_total_nci + std_norm_md + std_anomaly + 
+              std_norm_md:std_total_nci + std_preceding_dbh + std_preceding_dbh:std_total_nci +
+              std_preceding_dbh:std_norm_md + std_PC1 + (1|Site/Plot/Tree), oblidata)
+obli_md_pred<-glmm.predict(mod=model, newdat=data.frame(1, 0, 0, 0, 0, 0, 0*0, 0*0, 0*0), 
+                           se.mult=1.96, logit_link=FALSE, log_link=FALSE, glmmTMB=FALSE)^2
+obli_md_pred$Focal_sp <- 'E. obliqua'
+
+#ovat
+model<-lmer(sqrt(growth_rate) ~ std_total_nci + std_norm_md + std_anomaly +
+              std_norm_md:std_total_nci + std_preceding_dbh + std_preceding_dbh:std_total_nci +
+              std_preceding_dbh:std_norm_md + std_PC1 + (1|Site/Plot/Tree), ovatdata)
+ovat_md_pred<-glmm.predict(mod=model, newdat=data.frame(1, 0, 0, 0, 0, 0, 0*0, 0*0, 0*0), 
+                           se.mult=1.96, logit_link=FALSE, log_link=FALSE, glmmTMB=FALSE)^2
+ovat_md_pred$Focal_sp <- 'E. ovata'
+
+#vimi
+model<-lmer(sqrt(growth_rate) ~ std_total_nci + std_norm_md + std_anomaly + 
+              std_norm_md:std_total_nci + std_preceding_dbh + std_preceding_dbh:std_total_nci +
+              std_preceding_dbh:std_norm_md + std_PC1 + (1|Site/Plot/Tree), vimidata)
+vimi_md_pred<-glmm.predict(mod=model, newdat=data.frame(1, 0, 0, 0, 0, 0, 0*0, 0*0, 0*0), 
+                           se.mult=1.96, logit_link=FALSE, log_link=FALSE, glmmTMB=FALSE)^2
+vimi_md_pred$Focal_sp <- 'E. viminalis'
+
+#Merge them all
+pred_md_all_2 <- rbind(amyg_md_pred, obli_md_pred, ovat_md_pred, vimi_md_pred)
+
+## Plot them
+ggplot(pred_md_all_2, aes(x = Focal_sp, y = y))+
+  geom_point(position = position_dodge(0.8), cex=2.5)+
+  geom_errorbar(aes(ymin = lower, ymax = upper, width = 0.3), position = position_dodge(0.8), cex=1)+
+  ylab("Growth rate (mm/day)")+
+  xlab("Species")+
+  theme_classic()+
+  my_theme+
+  theme(axis.ticks.x = element_blank(),
+        axis.text.x = element_text(face = "italic"))
 
 #### archived Predictive plots of growth ~ long-term MD wet and dry - models no anomaly ####
 #Standard size (mean), standard NCI, standard PC1
