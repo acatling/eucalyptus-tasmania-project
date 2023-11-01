@@ -123,6 +123,54 @@ summary(amygmod1)
 vif(amygmod1)
 #great
 
+### 27/07/23 emmeans test of slope differing from 0 #####
+#for growth ~ NCI where mean MD is -1 and 1
+#low: preddata <- with(model, data.frame(1, -1, x_to_plot_low, 0, 0, 0, -1*x_to_plot_low, -1*0, x_to_plot_low*0))
+
+# https://stackoverflow.com/questions/73969771/estimating-joint-interaction-with-emmeans-and-emtrends-for-continuous-variab
+
+# (age_c.tr <- emtrends(model_y, "bmi_c", var = "age_c", 
+#                       +                       at = list(bmi_c = 0)))
+# bmi_c age_c.trend   SE   df lower.CL upper.CL
+# 0        2.01 0.01 9996     1.99     2.03
+# 
+# Confidence level used: 0.95 
+# 
+# > (bmi_c.tr <- emtrends(model_y, "age_c", var = "bmi_c", 
+#                         +                       at = list(age_c = 1)))
+# age_c bmi_c.trend      SE   df lower.CL upper.CL
+# 1        7.01 0.01124 9996    6.988    7.032
+# 
+# Confidence level used: 0.95 
+# 
+# > # Now sum these two results
+#  > contrast(rbind(age_c.tr, bmi_c.tr), list(comb.trend = c(1, 1)))
+
+#This is asking - are slopes of growth ~ nci
+#significantly different from each other when norm_md is 1 and -1
+emtrends(amygmod1, pairwise ~ std_norm_md, var="std_total_nci",at=list(std_norm_md=c(-1,1)))
+#yes, where norm_md is 1 and -1 the slopes are different from each other (p = 0.039)
+emtrends(oblimod1, pairwise ~ std_norm_md, var="std_total_nci",at=list(std_norm_md=c(-1,1)))
+# no, they are not (p=0.23)
+emtrends(ovatmod1, pairwise ~ std_norm_md, var="std_total_nci",at=list(std_norm_md=c(-1,1)))
+#yes, p=0.003
+emtrends(vimimod1, pairwise ~ std_norm_md, var="std_total_nci",at=list(std_norm_md=c(-1,1)))
+#yes, p=0.03
+
+#Need to ask this for when every other variable is held at its mean
+#Testing differences in predicted values at a particular level of the moderator
+#Check this https://stats.oarc.ucla.edu/r/seminars/interactions-r/#s3
+
+# mylist <- list(effort=c(effbr,effr,effar)) 
+# > emtrends(contcont, ~effort, var="hours",at=mylist)
+
+##didn't finish this - come back to it
+#Where long term md is -1 or 1, NCI is 0
+(mylist <- list(std_total_nci=0,std_norm_md=c(-1,1)))
+emmeans(amygmod1, pairwise ~ std_total_nci*std_norm_md, at=mylist)
+
+
+#####
 ### OBLI ####
 oblimod1 <- lmer(sqrt(growth_rate) ~ std_total_nci + std_norm_md + std_anomaly + 
                    std_norm_md:std_total_nci + std_preceding_dbh + std_preceding_dbh:std_total_nci + 

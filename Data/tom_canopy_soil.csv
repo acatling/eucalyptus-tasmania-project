@@ -1,0 +1,36 @@
+Site,Focal_sp,Plot,Tree,Focal_tree,CC (%),Soil description,Soil pH,Soil texture,Soil colour
+GR,AMYG,B,1,GRAMYGB1,26.04,YB silty clayey sand,5.09,Clayey sand,YB
+GR,AMYG,B,2,GRAMYGB2,43.75,YB silty clayey sand,4.48,Clayey sand,YB
+GR,AMYG,B,3,GRAMYGB3,36.46,Pale B silty sand,4.17,Silty sand,#NAME?
+GR,AMYG,C,1,GRAMYGC1,38.54,YB clayey sand,4.18,Clayey sand,YB
+GR,AMYG,C,3,GRAMYGC3,31.25,YB sand,4.11,Sand,YB
+GR,AMYG,C,4,GRAMYGC4,52.08,Pale B silty sand,3.48,Silty sand,#NAME?
+GR,AMYG,C,8,GRAMYGC8,38.54,Dark B mottled W sand w/ clay,2.98,Sand w/ clay,#NAME?
+GR,AMYG,A,1,GRAMYGA1,32.29,YB clayey sand,4.64,Clayey sand,#NAME?
+GR,AMYG,A,5,GRAMYGA5,42.71,Dark Y sand w/ clay,3.34,Sand w/ clay,#NAME?
+GR,AMYG,A,6,GRAMYGA6,58.33,YB sand,3.51,Sand,YB
+EPF,AMYG,A,1,EPFAMYGA1,44.79,B sandy clay loam,4.52,Sandy clay,B
+EPF,AMYG,A,2,EPFAMYGA2,44.79,B sandy clay loam,5.58,Sandy clay,B
+EPF,AMYG,A,5,EPFAMYGA5,38.54,B sandy clay,4.59,Sandy clay,B
+EPF,AMYG,A,7,EPFAMYGA7,31.25,B silty sand w/ clay,5.25,Sand w/ clay,B
+EPF,AMYG,B,1,EPFAMYGB1,20.83,Dark YB Sand w/ clay,4.48,Sand w/ clay,#NAME?
+EPF,AMYG,B,3,EPFAMYGB3,21.88,YB sand w/ clay,4.62,Sand w/ clay,YB
+EPF,AMYG,B,5,EPFAMYGB5,47.92,YB sand w/ clay,4.15,Sand w/ clay,YB
+EPF,AMYG,B,8,EPFAMYGB8,21.88,YB clayey sand,4.77,Clayey sand,YB
+EPF,AMYG,C,4,EPFAMYGC4,28.13,YB sand,4.91,Sand,YB
+EPF,AMYG,C,6,EPFAMYGC6,32.29,YB sand,4.84,Sand,YB
+EPF,AMYG,C,8,EPFAMYGC8,51.04,YB sand,4.2,Sand,YB
+BOF,AMYG,A,1,BOFAMYGA1,23.96,Dark B mottled W sand w/ clay,3.95,Sand w/ clay,#NAME?
+BOF,AMYG,A,2,BOFAMYGA2,23.96,Dark B mottled W sand w/ clay,3.78,Sand w/ clay,#NAME?
+BOF,AMYG,A,5,BOFAMYGA5,30.21,Dark B mottled W sand w/ clay,3.73,Sand w/ clay,#NAME?
+BOF,AMYG,A,7,BOFAMYGA7,26.04,Dark B mottled W sand w/ clay,3.59,Sand w/ clay,#NAME?
+BOF,AMYG,B,3,BOFAMYGB3,28.13,Dark B mottled W sand,3.18,Sand,#NAME?
+BOF,AMYG,B,4,BOFAMYGB4,32.29,Dark B mottled W sand w/ clay,3.83,Sand w/ clay,#NAME?
+BOF,AMYG,B,6,BOFAMYGB6,39.58,Dark B mottled W sand w/ clay,3.37,Sand w/ clay,#NAME?
+BOF,AMYG,B,8,BOFAMYGB8,47.92,YB sand w/ clay,4.12,Sand w/ clay,YB
+BOF,AMYG,C,2,BOFAMYGC2,21.88,Dark B mottled W sand w/ clay,3.68,Sand w/ clay,#NAME?
+BOF,AMYG,C,4,BOFAMYGC4,31.25,Dark B mottled W sand w/ clay,3.25,Sand w/ clay,#NAME?
+BOF,AMYG,C,7,BOFAMYGC7,26.04,Dark B mottled W sand w/ clay,3.35,Sand w/ clay,#NAME?
+DOG,AMYG,C,2,DOGAMYGC2,33.33,Pale Y sand,3.72,Sand,#NAME?
+DOG,AMYG,C,4,DOGAMYGC4,30.21,Dark B mottled R clayey sand,3.39,Clayey sand,+B/R
+DOG,AMYG,C,6,DOGAMYGC6,48.96,Red sandy clay loam,4.41,Sandy clay,R
